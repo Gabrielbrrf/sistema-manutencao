@@ -1,1 +1,123 @@
 
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Técnico - Ordens de Serviço</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #f8fafc; margin: 0; padding: 15px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-os { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        h3 { margin: 0 0 5px 0; color: #1e293b; font-size: 16px; }
+        p { margin: 0; color: #64748b; font-size: 14px; }
+        .btn-iniciar { background: #10b981; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        .secao-fechamento { display: none; margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 15px; }
+        input[type="number"], input[type="file"] { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
+        .btn-finalizar { background: #2563eb; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .empty { text-align: center; color: #94a3b8; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2 style="font-size: 1.2rem; margin: 0;">🛠️ Meus Serviços</h2>
+        <button onclick="carregarChamados()" style="padding: 8px; border-radius: 50%; border: 1px solid #ccc; background: white;">🔄</button>
+    </div>
+
+    <div id="lista-chamados">
+        <p class="empty">Buscando serviços...</p>
+    </div>
+
+    <script>
+        const SB_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
+        const sb = supabase.createClient(SB_URL, SB_KEY);
+
+        async function carregarChamados() {
+            const container = document.getElementById('lista-chamados');
+            
+            // Busca apenas o que está "Pendente"
+            const { data, error } = await sb
+                .from('ordens_servico')
+                .select('*')
+                .eq('status', 'Pendente')
+                .order('id', { ascending: false });
+
+            if (data.length === 0) {
+                container.innerHTML = '<p class="empty">Nenhum serviço pendente. ✅</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            data.forEach(os => {
+                container.innerHTML += `
+                    <div class="card-os">
+                        <h3>📍 ${os.cliente}</h3>
+                        <p>📝 ${os.descricao_servico}</p>
+                        <p style="font-size: 11px; margin-top: 5px;">👤 Técnico: ${os.tecnico}</p>
+                        
+                        <button class="btn-iniciar" id="btn-ini-${os.id}" onclick="abrirFechamento(${os.id})">INICIAR E FECHAR</button>
+                        
+                        <div id="box-${os.id}" class="secao-fechamento">
+                            <label style="font-size: 12px; font-weight: bold;">Mão de Obra R$:</label>
+                            <input type="number" id="mo-${os.id}" placeholder="0,00">
+                            
+                            <label style="font-size: 12px; font-weight: bold;">Materiais R$:</label>
+                            <input type="number" id="mat-${os.id}" placeholder="0,00">
+                            
+                            <label style="font-size: 12px; font-weight: bold;">Foto da NF/Recibo:</label>
+                            <input type="file" id="foto-${os.id}" accept="image/*" capture="camera">
+                            
+                            <button class="btn-finalizar" onclick="concluirServico(${os.id})">✅ CONCLUIR AGORA</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function abrirFechamento(id) {
+            document.getElementById(`btn-ini-${id}`).style.display = 'none';
+            document.getElementById(`box-${id}`).style.display = 'block';
+        }
+
+        async function concluirServico(id) {
+            const mo = document.getElementById(`mo-${id}`).value;
+            const mat = document.getElementById(`mat-${id}`).value;
+            const fotoInput = document.getElementById(`foto-${id}`);
+
+            if (!mo) { alert("Por favor, coloque o valor da mão de obra!"); return; }
+
+            let fotoBase64 = "";
+            if (fotoInput.files.length > 0) {
+                const reader = new FileReader();
+                fotoBase64 = await new Promise(res => {
+                    reader.readAsDataURL(fotoInput.files[0]);
+                    reader.onload = () => res(reader.result);
+                });
+            }
+
+            const { error } = await sb
+                .from('ordens_servico')
+                .update({
+                    status: 'Concluido',
+                    valor_mao_de_obra: parseFloat(mo),
+                    valor_gasto: parseFloat(mat || 0),
+                    foto_nf: fotoBase64,
+                    hora_conclusao: new Date().toISOString()
+                })
+                .eq('id', id);
+
+            if (!error) {
+                alert("Serviço finalizado com sucesso! Gabs já recebeu.");
+                carregarChamados();
+            } else {
+                alert("Erro ao salvar: " + error.message);
+            }
+        }
+
+        carregarChamados();
+    </script>
+</body>
+</html>
