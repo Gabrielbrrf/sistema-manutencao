@@ -1,1 +1,67 @@
 
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADM MASTER - GABS</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, select, button { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; }
+        button { background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 10px; border: 1px solid #eee; text-align: left; }
+        th { background: #1e293b; color: white; }
+        .btn-nf { background: #10b981; font-size: 10px; padding: 5px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🚀 Novo Chamado</h2>
+        <input type="text" id="c" placeholder="Local">
+        <input type="text" id="d" placeholder="Serviço">
+        <select id="t">
+            <option value="Israel Sillas">Israel Sillas</option>
+            <option value="Wil Sampaio">Wil Sampaio</option>
+        </select>
+        <button onclick="salvar()">LANÇAR</button>
+    </div>
+
+    <div class="card">
+        <h2>📋 Monitoramento</h2>
+        <table>
+            <thead><tr><th>Local</th><th>Técnico</th><th>Financeiro</th><th>Status</th><th>Ação</th></tr></thead>
+            <tbody id="lista"></tbody>
+        </table>
+    </div>
+
+<script>
+    const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
+
+    async function salvar() {
+        await sb.from('ordens_servico').insert([{ 
+            cliente: document.getElementById('c').value, 
+            descricao_servico: document.getElementById('d').value, 
+            tecnico: document.getElementById('t').value, 
+            status: 'Pendente' 
+        }]);
+        location.reload();
+    }
+
+    async function carregar() {
+        const { data } = await sb.from('ordens_servico').select('*').order('id', {ascending: false});
+        const l = document.getElementById('lista');
+        l.innerHTML = '';
+        data.forEach(o => {
+            const fin = o.status === 'Concluido' ? `R$ ${o.valor_mao_de_obra || 0}` : '---';
+            const nf = o.foto_nf ? `<button class="btn-nf" onclick="window.open().document.write('<img src=${o.foto_nf} width=100%>')">VER NF</button>` : '';
+            l.innerHTML += `<tr><td>${o.cliente}</td><td>${o.tecnico}</td><td>${fin} ${nf}</td><td>${o.status}</td><td><button onclick="del(${o.id})">🗑️</button></td></tr>`;
+        });
+    }
+    async function del(id) { if(confirm('Excluir?')) { await sb.from('ordens_servico').delete().eq('id', id); carregar(); } }
+    carregar();
+</script>
+</body>
+</html>
