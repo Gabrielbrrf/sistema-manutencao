@@ -42,7 +42,7 @@
     </div>
 
     <div class="card">
-        <h2>🚀 Abrir Novo Chamado</h2>
+        <h2>🚀 Abrir Novo Chamado (Lançar para Técnico)</h2>
         <div class="form-group">
             <input type="text" id="cliente" placeholder="Local/Condomínio">
             <input type="text" id="descricao" placeholder="O que precisa ser feito?">
@@ -51,42 +51,45 @@
                 <option value="Israel Sillas">Israel Sillas</option>
                 <option value="Wil Sampaio">Wil Sampaio</option>
             </select>
-            <button class="btn-criar" onclick="criarOS()">LANÇAR SERVIÇO</button>
+            <button class="btn-criar" onclick="lancarNovaOS()">LANÇAR SERVIÇO</button>
         </div>
     </div>
 
     <div class="card">
-        <h2>📋 Acompanhamento em Tempo Real</h2>
+        <h2>📋 Acompanhamento GERAL (Status dos Chamados)</h2>
         <table>
             <thead>
                 <tr>
                     <th>Local</th>
                     <th>Serviço</th>
                     <th>Responsável</th>
-                    <th>Financeiro</th>
+                    <th>Custos (M.Obra / Mat.)</th>
                     <th>Status</th>
-                    <th>Ações</th>
+                    <th>NF</th>
+                    <th>Ação</th>
                 </tr>
             </thead>
             <tbody id="lista-geral-os">
-                <tr><td colspan="6">Sincronizando...</td></tr>
+                <tr><td colspan="7">Sincronizando com Banco de Dados...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
+    // Configuração DIRETA aqui para não misturar com o arquivo do técnico
     const SUPABASE_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    async function criarOS() {
+    // FUNÇÃO PARA CRIAR - Só existe aqui
+    async function lancarNovaOS() {
         const cliente = document.getElementById('cliente').value;
         const descricao = document.getElementById('descricao').value;
         const tecnico = document.getElementById('tecnico_select').value;
 
         if (!cliente || !descricao || !tecnico) {
-            alert("Atenção Gabs: Preencha todos os campos!");
+            alert("⚠️ Gabs, preencha todos os campos antes de lançar!");
             return;
         }
 
@@ -98,60 +101,67 @@
         }]);
 
         if (!error) {
-            alert("✅ Enviado! Agora aparece na tela do técnico.");
+            alert("✅ Lançado com sucesso! Já está no celular do técnico.");
             document.getElementById('cliente').value = '';
             document.getElementById('descricao').value = '';
-            carregarOS();
+            atualizarTabela();
+        } else {
+            alert("Erro ao lançar: " + error.message);
         }
     }
 
-    async function carregarOS() {
-        const { data, error } = await _supabase.from('ordens_servico').select('*').order('id', { ascending: false });
+    // FUNÇÃO PARA CARREGAR A TABELA - Focada em monitoramento
+    async function atualizarTabela() {
+        const { data, error } = await _supabase
+            .from('ordens_servico')
+            .select('*')
+            .order('id', { ascending: false });
+
         if (error) return;
 
         const tabela = document.getElementById('lista-geral-os');
         tabela.innerHTML = '';
 
         data.forEach(os => {
-            const isConcluido = os.status === 'Finalizado' || os.status === 'Concluido';
-            const badge = isConcluido ? 'finalizado' : 'pendente';
-            const texto = isConcluido ? 'CONCLUÍDO' : 'EM ABERTO';
+            const isConcluido = os.status === 'Concluido' || os.status === 'Finalizado';
+            const badgeClass = isConcluido ? 'finalizado' : 'pendente';
+            const statusTexto = isConcluido ? 'CONCLUÍDO' : 'PENDENTE';
             
-            // Lógica para mostrar valor e botão da NF se existir
-            const infoFinanceira = isConcluido 
-                ? `MO: R$ ${os.valor_mao_de_obra || 0}<br>Mat: R$ ${os.valor_gasto || 0}` 
+            // Valores financeiros
+            const financeiro = isConcluido 
+                ? `R$ ${os.valor_mao_de_obra || 0} / R$ ${os.valor_gasto || 0}`
                 : '---';
-            
-            const btnVerNF = os.foto_nf 
-                ? `<button class="btn-nf" onclick="verNF('${os.foto_nf}')">📄 VER NF</button>` 
-                : '';
 
             tabela.innerHTML += `
                 <tr>
                     <td><strong>${os.cliente}</strong></td>
-                    <td style="color: #475569;">${os.descricao_servico || ''}</td>
+                    <td style="color: #666;">${os.descricao_servico || ''}</td>
                     <td>${os.tecnico}</td>
-                    <td><span style="font-size: 11px;">${infoFinanceira}</span> ${btnVerNF}</td>
-                    <td><span class="status-badge ${badge}">${texto}</span></td>
+                    <td>${financeiro}</td>
+                    <td><span class="status-badge ${badgeClass}">${statusTexto}</span></td>
+                    <td>
+                        ${os.foto_nf ? `<button class="btn-nf" onclick="abrirNF('${os.foto_nf}')">👁️ NF</button>` : '---'}
+                    </td>
                     <td><button class="btn-del" onclick="deletarOS(${os.id})">🗑️</button></td>
                 </tr>
             `;
         });
     }
 
-    function verNF(base64) {
-        const win = window.open();
-        win.document.write(`<body style="margin:0; background:#000; display:flex; align-items:center; justify-content:center;"><img src="${base64}" style="max-width:100%; max-height:100vh;"></body>`);
+    function abrirNF(imgBase64) {
+        const modal = window.open("");
+        modal.document.write(`<body style="margin:0; background:#000; display:flex; align-items:center; justify-content:center;"><img src="${imgBase64}" style="max-width:100%; max-height:100vh;"></body>`);
     }
 
     async function deletarOS(id) {
-        if(confirm("Deseja excluir este registro?")) {
-            await _supabase.from('ordens_servico').delete().eq('id', id);
-            carregarOS();
+        if(confirm("Gabs, confirma a exclusão definitiva desta OS?")) {
+            const { error } = await _supabase.from('ordens_servico').delete().eq('id', id);
+            if (!error) atualizarTabela();
         }
     }
 
-    carregarOS();
+    // Inicia a tabela ao abrir
+    atualizarTabela();
 </script>
 </body>
 </html>
