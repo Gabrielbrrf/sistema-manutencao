@@ -13,16 +13,7 @@
         th { background: #333; color: #d4af37; }
         .banco-horas { font-size: 24px; color: #2ecc71; margin: 10px 0; }
     </style>
-    <script>
-    (function() {
-        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-        // Se não for MASTER, expulsa para o portal
-        if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
-            alert("Área Restrita!");
-            window.location.href = "../portal.html";
-        }
-    })();
-</script>
+    
 </head>
 <body>
 

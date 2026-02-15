@@ -44,7 +44,7 @@
             gap: 10px;
         }
 
-        .card:not(.vago):hover { 
+        .card:hover { 
             border-color: #d4af37; 
             transform: translateY(-5px); 
             background: #252525;
@@ -52,12 +52,6 @@
         }
 
         .card span { font-size: 35px; }
-        
-        .vago { 
-            opacity: 0.3; 
-            cursor: not-allowed; 
-            background: #151515;
-        }
         
         .logout-link {
             margin-top: 30px;
@@ -70,16 +64,6 @@
             .grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
-    <script>
-    (function() {
-        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-        // Se não for MASTER, expulsa para o portal
-        if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
-            alert("Área Restrita!");
-            window.location.href = "../portal.html";
-        }
-    })();
-</script>
 </head>
 <body>
 
@@ -117,54 +101,47 @@
         </a>
     </div>
 
-    <a href="loguim.html" class="logout-link" onclick="localStorage.removeItem('usuarioLogado')">Sair do Sistema</a>
+    <a href="index.html" class="logout-link" onclick="localStorage.removeItem('usuarioLogado')">Sair do Sistema</a>
 
     <script>
     window.onload = function() {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
 
+        // 1. Verificação básica de login
         if (!usuarioLogado) {
-            window.location.href = "index.html"; // Volta para o login (que agora é index)
+            window.location.href = "index.html"; 
             return;
         }
 
-        const nivel = usuarioLogado.empresa; 
+        const nivel = usuarioLogado.empresa.toUpperCase(); // Normaliza para evitar erros
         const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
         document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
 
-        // Função para remover cards (usada apenas para funcionários)
         const removerCard = (id) => { 
             const el = document.getElementById(id);
             if(el) el.remove(); 
         };
 
-        // --- LÓGICA DE VISIBILIDADE ---
-
-        if (nivel === 'MASTER' || nivel === 'ADM') {
-            // VOCÊ VÊ TUDO! 
-            // Apenas garantimos que os links das pastas estejam corretos:
-            document.getElementById('card-pix').href = "01_Gestao_Pix/index.html";
-            document.getElementById('card-financeiro').href = "02_Financeiro_NF/index.html";
-            document.getElementById('card-manutencao').href = "03_Manutencao/manutencao.html"; 
-            document.getElementById('card-faxina').href = "04_Pagamento_Faxina/index.html";
-            document.getElementById('card-relatorio').href = "04_Pagamento_Faxina/relatorio.html";
-            
-            // Removemos a opacidade dos cards que estavam "vagos"
-            document.querySelectorAll('.card').forEach(c => c.classList.remove('vago'));
-        } 
-        
-        else if (nivel === 'MANUTENCAO') {
-            // ISRAEL E WIL: Só vêem o que é deles
+        // 2. LÓGICA DE VISIBILIDADE (O MESTRE VÊ TUDO, O TÉCNICO NÃO)
+        if (nivel === 'MANUTENCAO' || nivel === 'TECNICO') {
             removerCard('card-pix');
             removerCard('card-financeiro');
             removerCard('card-faxina');
             removerCard('card-relatorio');
             
-            // O link de manutenção para eles
             document.getElementById('card-manutencao').href = "03_Manutencao/manutencao.html";
             document.getElementById('card-ponto').href = "meu_ponto.html";
+        } 
+        else if (nivel === 'OPERACIONAL') {
+            removerCard('card-pix');
+            removerCard('card-financeiro');
+            removerCard('card-manutencao');
+            removerCard('card-faxina');
+            removerCard('card-relatorio');
+            document.getElementById('card-ponto').href = "ponto_faxina.html";
         }
+        // Se for MASTER ou ADM, ele ignora os IFs e mantém todos os cards na tela
     }
-</script>
+    </script>
 </body>
 </html>
