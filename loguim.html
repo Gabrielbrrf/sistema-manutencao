@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Super Host Brasil</title>
+    <link rel="stylesheet" href="loguim.css">
+</head>
+<body>
+
+    <div class="background-logo">
+        <img src="logo_superhost.png" alt="Background Logo">
+    </div>
+
+    <div class="login-card">
+        <h2>ÁREA DE ACESSO</h2>
+
+        <div class="input-group">
+            <label>Usuário</label>
+            <input type="text" id="user" placeholder="Digite seu usuário">
+        </div>
+        
+        <div class="input-group">
+            <label>Senha</label>
+            <input type="password" id="pass" placeholder="Digite sua senha">
+        </div>
+
+        <button onclick="tentarLogin()">ENTRAR NO SISTEMA</button>
+
+        <p class="footer-text">Desenvolvido por PROGGABS</p>
+    </div>
+
+    <script>
+        function tentarLogin() {
+            const user = document.getElementById('user').value;
+            const pass = document.getElementById('pass').value;
+
+            // --- NOSSO "BANCO DE DADOS" DE ACESSOS ---
+            const db_usuarios = {
+                "superhost": { senha: "123", empresa: "SuperHost" },
+                "studioclean": { senha: "321", empresa: "StudioClean" },
+                "newbyte": { senha: "456", empresa: "NewByte" }
+            };
+
+            const usuarioEncontrado = db_usuarios[user.toLowerCase()];
+
+            if (usuarioEncontrado && usuarioEncontrado.senha === pass) {
+                localStorage.setItem('usuarioLogado', JSON.stringify(usuarioEncontrado));
+                window.location.href = "portal.html";
+            } else {
+                alert("❌ Acesso negado! Verifique usuário e senha.");
+            }
+        }
+    </script>
+</body>
+</html>

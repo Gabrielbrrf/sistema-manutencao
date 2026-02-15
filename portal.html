@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel PROGGABS - Super Host Brasil</title>
+    <style>
+        /* MANTENDO SEUS ESTILOS ORIGINAIS */
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #0f0f0f; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        h1 { margin-bottom: 40px; letter-spacing: 2px; color: #d4af37; } 
+        
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 20px; 
+            max-width: 1000px; 
+            padding: 20px;
+        }
+
+        .card { 
+            background: #1e1e1e; 
+            padding: 40px 20px; 
+            border-radius: 15px; 
+            text-align: center; 
+            border: 1px solid #333; 
+            transition: all 0.3s ease; 
+            cursor: pointer; 
+            text-decoration: none; 
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-width: 150px;
+        }
+
+        .card:not(.vago):hover { 
+            border-color: #d4af37; 
+            transform: translateY(-10px); 
+            background: #252525;
+            box-shadow: 0 10px 20px rgba(212, 175, 55, 0.2);
+        }
+
+        .card span { font-size: 35px; }
+        
+        .vago { 
+            opacity: 0.3; 
+            cursor: not-allowed; 
+            background: #151515;
+        }
+        
+        .logout-link {
+            margin-top: 30px;
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1 id="boas-vindas">SISTEMA PROGGABS</h1>
+    
+    <div class="grid" id="grid-sistemas">
+        <a href="01_Gestao_Pix/index.html" class="card">
+            <span>💰</span>
+            <strong>Gestão PIX</strong>
+        </a>
+
+        <a href="02_Financeiro_NF/index.html" class="card">
+            <span>📑</span>
+            <strong>Financeiro SHB</strong>
+        </a>
+
+        <a href="03_Manutencao_OS/index.html" class="card">
+            <span>🛠️</span>
+            <strong>Manutenção OS</strong>
+        </a>
+
+        <a href="#" id="card-faxina" class="card vago">
+            <span id="icon-faxina">🔒</span>
+            <strong>Pagamento Faxina</strong>
+        </a>
+
+        <a href="#" id="card-studio" class="card vago">
+            <span id="icon-studio">🔒</span>
+            <strong>Studio Clean</strong>
+        </a>
+
+        <a href="#" id="card-newbyte" class="card vago">
+            <span id="icon-newbyte">🔒</span>
+            <strong>NewByte Tech</strong>
+        </a>
+
+        <div class="card vago"><span>🔒</span><strong>Vago</strong></div>
+        <div class="card vago"><span>🔒</span><strong>Vago</strong></div>
+    </div>
+
+    <a href="loguim.html" class="logout-link" onclick="localStorage.removeItem('usuarioLogado')">Sair do Sistema</a>
+
+    <script>
+        window.onload = function() {
+            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+
+            if (!usuarioLogado) {
+                window.location.href = "loguim.html";
+                return;
+            }
+
+            // Lógica de privilégios para liberar os sistemas travados
+            if (usuarioLogado.empresa === 'SuperHost' || usuarioLogado.empresa === 'MASTER') {
+                ativarCard('card-faxina', '🧹', '04_Pagamento_Faxina/index.html');
+                ativarCard('card-studio', '✨', '05_Studio_Clean/index.html');
+                ativarCard('card-newbyte', '💻', '06_NewByte/index.html');
+                
+                document.getElementById('boas-vindas').innerText = "PORTAL SUPER HOST";
+            }
+        }
+
+        function ativarCard(id, emoji, link) {
+            const el = document.getElementById(id);
+            if(el) {
+                el.classList.remove('vago');
+                el.href = link;
+                el.querySelector('span').innerText = emoji;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+/* ==========================================================================
+   1. CONFIGURAÇÕES GERAIS E RESET
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f0f2f5;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: 950px;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+}
+
+h1 { font-size: 24px; color: #2c3e50; }
+
+/* ==========================================================================
+   2. SISTEMA DE BOTÕES "ABRE E FECHA" (ACORDEÃO)
+   ========================================================================== */
+
+.btn-cidade-collapse {
+    width: 100%;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 8px;
+    margin-top: 12px;
+    cursor: pointer;
+    font-weight: 900;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+.btn-cidade-collapse:hover { opacity: 0.95; transform: scale(1.005); }
+
+/* Cores das Seções (Cidades e ADM) */
+.administracao { background: #1e293b; border-bottom: 4px solid #94a3b8; }
+.santos { background: #2c3e50; border-bottom: 4px solid #f1c40f; }
+.saovicente { background: #8e44ad; border-bottom: 4px solid #ce93d8; }
+.guaruja { background: #2980b9; border-bottom: 4px solid #2ecc71; }
+.praiagrande { background: #16a085; border-bottom: 4px solid #a3e4d7; }
+
+/* Botão do Setor */
+.btn-setor-collapse {
+    width: 96%;
+    margin: 8px auto;
+    padding: 12px 15px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-left: 6px solid #64748b;
+    border-radius: 6px;
+    cursor: pointer;
+    display: block;
+    font-weight: bold;
+    color: #334155;
+    text-align: left;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.painel-setores { padding: 10px 0; background: #f8fafc; border-radius: 0 0 8px 8px; margin-bottom: 10px; }
+.painel-cards { padding: 5px 15px 10px 15px; }
+
+/* ==========================================================================
+   3. ESTILO DOS CARDS DE PIX (ESTILO DA FOTO)
+   ========================================================================== */
+.contato-card {
+    background: #fff;
+    padding: 18px 25px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    border-left: 6px solid #3498db; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.card-destaque {
+    border-left-color: #f1c40f !important;
+    background-color: #fffdf5 !important;
+}
+
+.contato-info-box { display: flex; flex-direction: column; }
+
+.nome-btn {
+    background: #34495e; 
+    color: white;
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    display: inline-block;
+}
+
+.categoria-label {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.pix-info-box { text-align: right; }
+
+.pix-display {
+    display: block;
+    font-size: 19px;
+    color: #1e293b;
+    margin-bottom: 6px;
+    font-weight: 800;
+}
+
+.pix-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* --- BADGES DE AÇÃO --- */
+.badge-pix {
+    background: #f1f5f9;
+    color: #3498db;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid #e2e8f0;
+}
+
+.badge-edit {
+    background: #fff9db;
+    color: #f08c00;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid #ffe066;
+}
+
+.badge-delete {
+    background: #fff5f5;
+    color: #e74c3c;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid #fee2e2;
+}
+
+/* ==========================================================================
+   4. ESTILO PARA GESTÃO DE NOTAS FISCAIS (NF)
+   ========================================================================== */
+.nf-item {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    border-left: 6px solid #2ecc71; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+/* ==========================================================================
+   5. FORMULÁRIO E ABAS
+   ========================================================================== */
+.tab-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: #e2e8f0;
+    color: #64748b;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.tab-btn.active { background: #3498db; color: white; }
+
+.form-grid-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #f9f9f9;
+    padding: 25px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+}
+
+input, select {
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    width: 100%;
+}
+
+.btn-salvar {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   6. UTILITÁRIOS E RESPONSIVIDADE
+   ========================================================================== */
+.hidden { display: none !important; }
+
+@media (max-width: 650px) {
+    .contato-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .pix-info-box { text-align: left; width: 100%; }
+    .pix-actions { justify-content: flex-start; }
+}
