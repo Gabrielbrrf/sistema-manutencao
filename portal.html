@@ -67,53 +67,31 @@
 </head>
 <body>
 
-    <h1 id="boas-vindas">SISTEMA PROGGABS</h1>
+    <h1 id="boas-vindas">CARREGANDO...</h1>
     
     <div class="grid" id="grid-sistemas">
-        <a href="01_Gestao_Pix/index.html" id="card-pix" class="card">
-            <span>💰</span>
-            <strong>Contatos PIX</strong>
-        </a>
-
-        <a href="04_Pagamento_Faxina/index.html" id="card-faxina" class="card">
-            <span>🧹</span>
-            <strong>Pagamento Faxina</strong>
-        </a>
-
-        <a href="03_Manutencao/manutencao.html" id="card-manutencao" class="card">
-            <span>🛠️</span>
-            <strong>Manutenção OS</strong>
-        </a>
-
-        <a href="02_Financeiro_NF/index.html" id="card-financeiro" class="card">
-            <span>📑</span>
-            <strong>Arquivo de Notas</strong>
-        </a>
-
-        <a href="04_Pagamento_Faxina/relatorio.html" id="card-relatorio" class="card">
-            <span>📊</span>
-            <strong>Relatório Geral</strong>
-        </a>
-
-        <a href="meu_ponto.html" id="card-ponto" class="card">
-            <span>⏱️</span>
-            <strong>Meu Ponto</strong>
-        </a>
+        <a href="01_Gestao_Pix/index.html" id="card-pix" class="card"><span>💰</span><strong>Contatos PIX</strong></a>
+        <a href="04_Pagamento_Faxina/index.html" id="card-faxina" class="card"><span>🧹</span><strong>Pagamento Faxina</strong></a>
+        <a href="03_Manutencao_OS/index.html" id="card-manutencao" class="card"><span>🛠️</span><strong>Manutenção OS</strong></a>
+        <a href="02_Financeiro_NF/index.html" id="card-financeiro" class="card"><span>📑</span><strong>Arquivo de Notas</strong></a>
+        <a href="05_Relatorio_Faxina/relatorio.html" id="card-relatorio" class="card"><span>📊</span><strong>Relatório Geral</strong></a>
+        <a href="06_Ponto_relatorio/meu_ponto.html" id="card-ponto" class="card"><span>⏱️</span><strong>Meu Ponto</strong></a>
     </div>
 
     <a href="index.html" class="logout-link" onclick="localStorage.removeItem('usuarioLogado')">Sair do Sistema</a>
 
     <script>
+    // Executa assim que a página carrega
     window.onload = function() {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
 
-        // 1. Verificação básica de login
+        // Se não tiver login, manda pro index.html (seu login) imediatamente
         if (!usuarioLogado) {
             window.location.href = "index.html"; 
             return;
         }
 
-        const nivel = usuarioLogado.empresa.toUpperCase(); // Normaliza para evitar erros
+        const nivel = usuarioLogado.empresa.toUpperCase(); 
         const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
         document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
 
@@ -122,15 +100,16 @@
             if(el) el.remove(); 
         };
 
-        // 2. LÓGICA DE VISIBILIDADE (O MESTRE VÊ TUDO, O TÉCNICO NÃO)
+        // --- CONTROLE DE ACESSO ---
         if (nivel === 'MANUTENCAO' || nivel === 'TECNICO') {
             removerCard('card-pix');
             removerCard('card-financeiro');
             removerCard('card-faxina');
             removerCard('card-relatorio');
             
-            document.getElementById('card-manutencao').href = "03_Manutencao/manutencao.html";
-            document.getElementById('card-ponto').href = "meu_ponto.html";
+            // Ajusta os links que sobraram para as pastas certas
+            document.getElementById('card-manutencao').href = "03_Manutencao_OS/index.html";
+            document.getElementById('card-ponto').href = "06_Ponto_relatorio/meu_ponto.html";
         } 
         else if (nivel === 'OPERACIONAL') {
             removerCard('card-pix');
@@ -138,9 +117,9 @@
             removerCard('card-manutencao');
             removerCard('card-faxina');
             removerCard('card-relatorio');
-            document.getElementById('card-ponto').href = "ponto_faxina.html";
+            document.getElementById('card-ponto').href = "06_Ponto_relatorio/ponto_faxina.html";
         }
-        // Se for MASTER ou ADM, ele ignora os IFs e mantém todos os cards na tela
+        // Se for MASTER ou ADM, ele não entra nos IFs e os links padrão já estão no HTML.
     }
     </script>
 </body>
