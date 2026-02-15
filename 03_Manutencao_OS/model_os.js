@@ -1,4 +1,4 @@
-/* model_os.js - ATUALIZADO: APENAS ISRAEL E WIL */
+/* model_os.js - ATUALIZADO: FOCO NA TABELA COLABORADORES */
 const SUPABASE_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY'; 
 
@@ -8,10 +8,26 @@ if (!window._supabase) {
 }
 
 const ManutencaoModel = {
-    // Agora retorna DIRETO os dois, sem buscar a lista de contatos do banco
+    // BUSCA TÉCNICOS: Agora puxando especificamente da tabela colaboradores
     async buscarTecnicos() {
-        console.log("Carregando técnicos oficiais...");
-        return ["Israel Sillas", "Wil Sampaio"]; 
+        try {
+            console.log("Buscando time de manutenção na tabela colaboradores...");
+            const { data, error } = await window._supabase
+                .from('colaboradores') 
+                .select('nome')
+                // Se quiser garantir que só apareçam os dois mesmo que entrem novos, 
+                // podemos manter o backup ou filtrar por nome aqui
+                .in('nome', ['Israel Sillas', 'Wil Sampaio']) 
+                .order('nome');
+            
+            if (error || !data || data.length === 0) throw error;
+            return data.map(t => t.nome);
+            
+        } catch (err) {
+            console.warn("Erro ao acessar tabela colaboradores, usando lista manual:", err);
+            // Backup de segurança para o sistema não parar
+            return ["Israel Sillas", "Wil Sampaio"]; 
+        }
     },
 
     async salvarNoBanco(dados) {
