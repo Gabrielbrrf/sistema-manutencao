@@ -6,6 +6,16 @@
     <title>Relatório de Gastos - SHB</title>
     <link rel="stylesheet" href="../style_global.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+    (function() {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        // Se não for MASTER, expulsa para o portal
+        if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
+            alert("Área Restrita!");
+            window.location.href = "../portal.html";
+        }
+    })();
+</script>
 </head>
 <body>
     <div class="container">

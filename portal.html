@@ -70,6 +70,16 @@
             .grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
+    <script>
+    (function() {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        // Se não for MASTER, expulsa para o portal
+        if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
+            alert("Área Restrita!");
+            window.location.href = "../portal.html";
+        }
+    })();
+</script>
 </head>
 <body>
 
@@ -110,54 +120,51 @@
     <a href="loguim.html" class="logout-link" onclick="localStorage.removeItem('usuarioLogado')">Sair do Sistema</a>
 
     <script>
-        window.onload = function() {
-            const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    window.onload = function() {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
 
-            if (!usuarioLogado) {
-                window.location.href = "loguim.html";
-                return;
-            }
-
-            const nivel = usuarioLogado.empresa; // MASTER, MANUTENCAO ou OPERACIONAL
-            const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
-            
-            document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
-
-            // Função para esconder o que não deve ser visto
-            const esconder = (id) => { 
-                const el = document.getElementById(id);
-                if(el) el.style.display = 'none'; 
-            };
-
-            // CONTROLE DE ACESSO POR NÍVEL
-            if (nivel === 'MASTER' || nivel === 'ADM') {
-                // MASTER vê tudo, não precisa esconder nada.
-                // Ajustamos apenas links específicos se necessário
-                document.getElementById('card-ponto').href = "relatorios_gerais.html"; // Ver pontos de todos
-            } 
-            
-            else if (nivel === 'OPERACIONAL') {
-                // FAXINEIRAS: Só veem Ponto e Orientações (se houver)
-                esconder('card-pix');
-                esconder('card-financeiro');
-                esconder('card-manutencao');
-                esconder('card-relatorio');
-                esconder('card-faxina'); // Elas não calculam o próprio pagamento
-                
-                document.getElementById('card-ponto').href = "ponto_faxina.html";
-            }
-
-            else if (nivel === 'MANUTENCAO') {
-                // TÉCNICOS: Veem Ordens de Serviço e o próprio Ponto
-                esconder('card-pix');
-                esconder('card-financeiro');
-                esconder('card-faxina');
-                esconder('card-relatorio');
-                
-                document.getElementById('card-manutencao').href = "03_Manutencao/manutencao.html";
-                document.getElementById('card-ponto').href = "meu_ponto.html";
-            }
+        if (!usuarioLogado) {
+            window.location.href = "index.html"; // Volta para o login (que agora é index)
+            return;
         }
-    </script>
+
+        const nivel = usuarioLogado.empresa; 
+        const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
+        document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
+
+        // Função para remover cards (usada apenas para funcionários)
+        const removerCard = (id) => { 
+            const el = document.getElementById(id);
+            if(el) el.remove(); 
+        };
+
+        // --- LÓGICA DE VISIBILIDADE ---
+
+        if (nivel === 'MASTER' || nivel === 'ADM') {
+            // VOCÊ VÊ TUDO! 
+            // Apenas garantimos que os links das pastas estejam corretos:
+            document.getElementById('card-pix').href = "01_Gestao_Pix/index.html";
+            document.getElementById('card-financeiro').href = "02_Financeiro_NF/index.html";
+            document.getElementById('card-manutencao').href = "03_Manutencao/manutencao.html"; 
+            document.getElementById('card-faxina').href = "04_Pagamento_Faxina/index.html";
+            document.getElementById('card-relatorio').href = "04_Pagamento_Faxina/relatorio.html";
+            
+            // Removemos a opacidade dos cards que estavam "vagos"
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('vago'));
+        } 
+        
+        else if (nivel === 'MANUTENCAO') {
+            // ISRAEL E WIL: Só vêem o que é deles
+            removerCard('card-pix');
+            removerCard('card-financeiro');
+            removerCard('card-faxina');
+            removerCard('card-relatorio');
+            
+            // O link de manutenção para eles
+            document.getElementById('card-manutencao').href = "03_Manutencao/manutencao.html";
+            document.getElementById('card-ponto').href = "meu_ponto.html";
+        }
+    }
+</script>
 </body>
 </html>
