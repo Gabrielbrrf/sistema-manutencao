@@ -41,16 +41,15 @@ const ManutencaoController = {
 document.getElementById('btnIniciarOS')?.addEventListener('click', () => {
     horaInicioReal = new Date().toISOString(); 
     
-    // Feedback visual
+    // Feedback visual e troca de seções
     const btnIniciar = document.getElementById('btnIniciarOS');
-    btnIniciar.style.display = 'none';
-    
-    // Mostra campos de fechamento (Financeiro e botão salvar)
     const secaoFin = document.getElementById('secaoFinanceiraOS');
     const btnGerar = document.getElementById('btnGerarOS');
-    
-    if (secaoFin) secaoFin.style.display = 'block';
-    if (btnGerar) btnGerar.style.display = 'block';
+
+    // Usamos setProperty para ignorar o !important do CSS do index
+    if (btnIniciar) btnIniciar.style.setProperty('display', 'none', 'important');
+    if (secaoFin) secaoFin.style.setProperty('display', 'block', 'important');
+    if (btnGerar) btnGerar.style.setProperty('display', 'block', 'important');
     
     console.log("OS Iniciada em: " + horaInicioReal);
 });
@@ -60,7 +59,6 @@ document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
     const btn = document.getElementById('btnGerarOS');
     const tecnicoSelect = document.getElementById('tecnicoOS');
 
-    // Validação simples: Não deixa salvar sem escolher quem fez o serviço
     if (!tecnicoSelect.value) {
         alert("Por favor, selecione o Técnico responsável!");
         return;
@@ -71,7 +69,6 @@ document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
     btn.style.background = "#95a5a6";
 
     try {
-        // 1. Tratamento da Imagem (Nota Fiscal)
         let base64NF = "";
         const inputNF = document.getElementById('inputNF'); 
         
@@ -86,7 +83,6 @@ document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
 
         btn.innerText = "ENVIANDO AO BANCO...";
 
-        // 2. Montagem dos Dados (Batendo com a View e as colunas do seu Banco)
         const dados = {
             cidade: document.getElementById('cidadeOS')?.value || "",
             tecnico: tecnicoSelect.value,
@@ -104,7 +100,6 @@ document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
             status: 'Concluido'
         };
 
-        // 3. Salva no Banco via Model
         const { error } = await ManutencaoModel.salvarNoBanco(dados);
         
         if (!error) {
@@ -123,5 +118,4 @@ document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
     }
 });
 
-// Inicializa o Controller ao carregar a página
 window.addEventListener('load', () => ManutencaoController.init());
