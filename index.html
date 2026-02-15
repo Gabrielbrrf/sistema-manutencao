@@ -8,7 +8,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
     <div class="background-logo">
         <img src="logo_superhost.png" alt="Background Logo">
     </div>
@@ -32,7 +31,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Se o cara já estiver logado e cair aqui, a gente limpa pra não dar conflito
+        // Sempre limpa o login ao abrir a página inicial para garantir que o role funcione
         localStorage.removeItem('usuarioLogado');
 
         async function tentarLogin() {
@@ -44,34 +43,27 @@
                 return;
             }
 
-            try {
-                const { data, error } = await _supabase
-                    .from('colaboradores')
-                    .select('*')
-                    .eq('loguim', userField) 
-                    .eq('senha', passField)
-                    .eq('ativo', true)
-                    .single();
+            const { data, error } = await _supabase
+                .from('colaboradores')
+                .select('*')
+                .eq('loguim', userField) 
+                .eq('senha', passField)
+                .eq('ativo', true)
+                .single();
 
-                if (error || !data) {
-                    alert("Usuário ou senha incorretos!");
-                    return;
-                }
-
-                // Salva os dados no navegador
-                localStorage.setItem('usuarioLogado', JSON.stringify({
-                    nome: data.nome,
-                    loguim: data.loguim,
-                    empresa: data.empresa 
-                }));
-
-                // Redireciona para o portal
-                window.location.href = 'portal.html';
-
-            } catch (err) {
-                console.error("Erro:", err);
-                alert("Erro ao conectar com o banco de dados.");
+            if (error || !data) {
+                alert("Usuário ou senha incorretos!");
+                return;
             }
+
+            localStorage.setItem('usuarioLogado', JSON.stringify({
+                nome: data.nome,
+                loguim: data.loguim,
+                empresa: data.empresa 
+            }));
+
+            // AGORA VAI PARA A PASTA NOVA:
+            window.location.href = '00_Portal/portal.html';
         }
     </script>
 </body>
