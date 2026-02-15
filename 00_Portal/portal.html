@@ -35,7 +35,6 @@
     window.onload = function() {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
 
-        // Proteção: Se não houver sessão, volta para o login
         if (!usuarioLogado) {
             window.location.href = '../index.html'; 
             return;
@@ -45,7 +44,6 @@
         const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
         document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
 
-        // Função para configurar os caminhos saindo da pasta 00_Portal para as vizinhas
         const configurarLink = (id, pasta, arquivo = "index.html") => {
             const el = document.getElementById(id);
             if(el) el.href = `../${pasta}/${arquivo}`;
@@ -56,17 +54,23 @@
             if(el) el.remove(); 
         };
 
-        // --- CONFIGURAÇÃO DOS CAMINHOS ---
-        // Certifique-se que os nomes das pastas no seu computador/Vercel são exatamente esses:
+        // --- CONFIGURAÇÃO PADRÃO DOS CAMINHOS ---
         configurarLink('card-pix', '01_Gestao_Pix');
         configurarLink('card-financeiro', '02_Financeiro_NF');
-        configurarLink('card-manutencao', '03_Manutencao_OS');
         configurarLink('card-faxina', '04_Pagamento_Faxina');
         configurarLink('card-relatorio', '05_Relatorio_Faxina', 'relatorio.html');
         configurarLink('card-ponto', '06_Ponto_relatorio', 'meu_ponto.html');
 
-        // --- REGRAS DE ACESSO POR NÍVEL ---
-        if (nivel === 'MANUTENCAO' || nivel === 'TECNICO') {
+        // --- LÓGICA DE DIRECIONAMENTO DA MANUTENÇÃO ---
+        if (nivel === 'MASTER' || nivel === 'ADM') {
+            // Gabs e ADM vão para a pasta MASTER
+            configurarLink('card-manutencao', '03_MASTER');
+        } 
+        else if (nivel === 'MANUTENCAO' || nivel === 'TECNICO') {
+            // Técnicos vão para a pasta TECNICO
+            configurarLink('card-manutencao', '03_TECNICO');
+            
+            // Esconde o resto para eles
             removerCard('card-pix');
             removerCard('card-financeiro');
             removerCard('card-faxina');
@@ -78,10 +82,8 @@
             removerCard('card-manutencao');
             removerCard('card-faxina');
             removerCard('card-relatorio');
-            // Operacional usa um arquivo de ponto diferente
             configurarLink('card-ponto', '06_Ponto_relatorio', 'ponto_faxina.html');
         }
-        // MASTER e ADM visualizam todos os cards configurados acima
     }
     </script>
 </body>
