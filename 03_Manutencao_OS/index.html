@@ -6,6 +6,13 @@
     <title>Manutenção OS - Super Host</title>
     <link rel="stylesheet" href="../style_global.css"> 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* Forçamos o display none via CSS para não ter erro de carregamento */
+        #secaoFinanceiraOS, #btnGerarOS {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -31,44 +38,42 @@
                 <input type="text" id="aptoOS" placeholder="Apto" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
             </div>
 
-            <input type="text" id="servicoOS" placeholder="O que foi feito? (Ex: Troca de resistência)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 12px; box-sizing: border-box;">
+            <input type="text" id="servicoOS" placeholder="O que foi feito?" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 12px; box-sizing: border-box;">
             
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
                 <label style="font-size: 11px; font-weight: bold; color: #64748b;">HÓSPEDE?</label>
                 <select id="hospedeStatusOS" style="flex: 1; min-width: 100px; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
                     <option value="Sim">Sim</option>
-                    <option value="Não">Não</option>
+                    <option value="Não" selected>Não</option>
                     <option value="Permitiu Entrada">Permitiu Entrada</option>
                 </select>
                 <input type="date" id="dataOS" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
                 <input type="time" id="horaEstimadaOS" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
             </div>
 
-            <div id="secaoFinanceiraOS" style="display: none; margin-top: 15px; background: #f0f7ff; padding: 15px; border-radius: 8px; border: 2px dashed #2563eb;">
-                <h3 style="font-size: 14px; margin-top: 0; color: #1e40af; display: flex; align-items: center; gap: 5px;">💰 Financeiro e NF</h3>
+            <div id="secaoFinanceiraOS" style="margin-top: 15px; background: #f0f7ff; padding: 15px; border-radius: 8px; border: 2px dashed #2563eb;">
+                <h3 style="font-size: 14px; margin-top: 0; color: #1e40af;">💰 Financeiro e NF</h3>
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                     <input type="number" id="valorMaoObra" placeholder="Mão de Obra R$" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe;">
                     <input type="number" id="valorMateriais" placeholder="Materiais R$" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe;">
                 </div>
-                <label style="font-size: 11px; color: #1e40af; font-weight: bold; display: block; margin-bottom: 5px;">📷 ANEXAR NOTA FISCAL / RECIBO</label>
-                <input type="file" id="inputNF" accept="image/*" capture="camera" style="font-size: 12px;">
+                <input type="file" id="inputNF" accept="image/*" capture="camera">
             </div>
 
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="btn-salvar" id="btnIniciarOS" style="background: #10b981; flex: 1; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">▶️ Iniciar Serviço</button>
-                <button class="btn-salvar" id="btnGerarOS" style="background: #2563eb; flex: 1; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: none;">✅ Salvar e Finalizar</button>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="btnIniciarOS" style="background: #10b981; flex: 1; color: white; padding: 15px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer;">▶️ Iniciar Serviço</button>
+                <button id="btnGerarOS" style="background: #2563eb; flex: 1; color: white; padding: 15px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer;">✅ Salvar e Finalizar</button>
             </div>
         </section>
 
         <div id="listaOS" style="margin-top: 25px;">
-            <h3 style="font-size: 16px; color: #475569; border-left: 4px solid #d4af37; padding-left: 10px;">Histórico Recente</h3>
-            <div id="conteudoLista">
-                </div>
+            <h3 style="font-size: 16px; color: #475569;">Histórico Recente</h3>
+            <div id="conteudoLista"></div>
         </div>
     </div>
 
-<script src="model_os.js"></script>
-<script src="view_os.js"></script>
-<script src="controller_os.js"></script>
+    <script src="model_os.js"></script>
+    <script src="view_os.js"></script>
+    <script src="controller_os.js"></script>
 </body>
 </html>
