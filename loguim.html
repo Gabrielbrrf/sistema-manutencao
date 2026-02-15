@@ -6,7 +6,6 @@
     <title>Login - Super Host Brasil</title>
     <link rel="stylesheet" href="loguim.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="model_os.js"></script>
 </head>
 <body>
 
@@ -33,24 +32,25 @@
     </div>
 
     <script>
+        // Configuração direta com as suas chaves
+        const SUPABASE_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
+        
+        // Inicializa o cliente dentro do script de login
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         async function tentarLogin() {
-            const userLogin = document.getElementById('user').value;
-            const userPass = document.getElementById('pass').value;
+            const userLogin = document.getElementById('user').value.trim();
+            const userPass = document.getElementById('pass').value.trim();
 
             if (!userLogin || !userPass) {
                 alert("Preencha todos os campos!");
                 return;
             }
 
-            // Verifica se o objeto _supabase existe (carregado do model_os.js)
-            if (!window._supabase) {
-                alert("Erro: Conexão com Supabase não encontrada.");
-                return;
-            }
-
             try {
-                // Busca o colaborador no Supabase (ajustado para a sua coluna 'loguim')
-                const { data, error } = await window._supabase
+                // Busca o colaborador usando 'loguim' (coluna com 'u')
+                const { data, error } = await _supabase
                     .from('colaboradores')
                     .select('nome, loguim, ativo')
                     .eq('loguim', userLogin) 
@@ -59,23 +59,23 @@
                     .single();
 
                 if (data) {
-                    // Salva os dados no formato que o seu novo PORTAL espera
+                    // Salva os dados para o Portal
                     localStorage.setItem('usuarioLogado', JSON.stringify({
                         nome: data.nome,
                         loguim: data.loguim,
-                        empresa: 'TECNICO' // Define como técnico para filtrar o menu
+                        empresa: 'TECNICO' 
                     }));
                     
-                    // Salva também o nome solto para a sua OS antiga não quebrar
+                    // Salva para a compatibilidade com a OS
                     localStorage.setItem('tecnico_nome', data.nome);
                     
                     window.location.href = 'portal.html';
                 } else {
-                    alert("Usuário, senha incorretos ou acesso negado!");
+                    alert("Usuário ou senha incorretos (ou acesso desativado no banco)!");
                 }
             } catch (err) {
                 console.error("Erro no login:", err);
-                alert("Erro ao conectar com o servidor.");
+                alert("Erro ao conectar com o Supabase. Verifique sua internet.");
             }
         }
     </script>
