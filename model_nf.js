@@ -1,26 +1,49 @@
+/* model_nf.js - Agora integrado ao Supabase */
+
 export const ModelNF = {
-    notas: JSON.parse(localStorage.getItem('db_nfs_shb')) || [],
-
-    adicionarNota(novaNota) {
-        if (!novaNota.id) novaNota.id = Date.now().toString();
-        this.notas.push(novaNota);
-        this.salvarNoBanco();
+    // Busca as notas direto do banco
+    async listarNotas() {
+        const { data, error } = await _supabase
+            .from('notas_fiscais')
+            .select('*')
+            .order('data', { ascending: false });
+        
+        if (error) {
+            console.error("Erro ao buscar notas:", error);
+            return [];
+        }
+        return data;
     },
 
-    excluirNota(id) {
-        this.notas = this.notas.filter(nota => nota.id !== id);
-        this.salvarNoBanco();
+    // Salva a nota no Supabase
+    async adicionarNota(novaNota) {
+        const { error } = await _supabase
+            .from('notas_fiscais')
+            .insert([novaNota]);
+        
+        return { success: !error, error };
     },
 
-    salvarNoBanco() {
-        localStorage.setItem('db_nfs_shb', JSON.stringify(this.notas));
+    // Exclui do banco
+    async excluirNota(id) {
+        const { error } = await _supabase
+            .from('notas_fiscais')
+            .delete()
+            .eq('id', id);
+        
+        return { success: !error, error };
     },
 
-    getNotasPorMes(mesSelecionado) {
-        return this.notas.filter(nota => {
-            if (!nota.data) return false;
-            const partesData = nota.data.split('-'); 
-            const mesDaNota = parseInt(partesData[1]);
+    // Filtra por mês (usando a lógica do banco)
+    async getNotasPorMes(mesSelecionado) {
+        const { data, error } = await _supabase
+            .from('notas_fiscais')
+            .select('*');
+        
+        if (error) return [];
+
+        return data.filter(nota => {
+            const mesDaNota = parseInt(nota.data.split('-')[1]);
             return mesDaNota === parseInt(mesSelecionado);
         });
     }

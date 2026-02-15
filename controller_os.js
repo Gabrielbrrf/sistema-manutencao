@@ -1,4 +1,4 @@
-/* controller_os.js */
+/* controller_os.js - Atualizado */
 let horaInicioReal = null;
 
 const ManutencaoController = {
@@ -8,6 +8,7 @@ const ManutencaoController = {
             ManutencaoView.renderizarTecnicos(tecnicos);
 
             const { data: ordens } = await ManutencaoModel.buscarTodasOS();
+            // Garante que a lista seja renderizada
             ManutencaoView.renderizarLista(ordens || []);
 
             const agora = new Date();
@@ -34,21 +35,26 @@ document.getElementById('btnIniciarOS')?.addEventListener('click', () => {
     document.getElementById('btnGerarOS').style.display = 'block';
 });
 
-// BOTÃO SALVAR E FINALIZAR (CORRIGIDO)
+// BOTÃO SALVAR E FINALIZAR
 document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
     const btn = document.getElementById('btnGerarOS');
     btn.disabled = true;
     btn.innerText = "SALVANDO...";
 
-    // 1. Pega o arquivo da NF (Usando o ID 'inputNF' que está no seu HTML)
-    let urlNF = "";
+    // 1. Tratamento da Imagem (Nota Fiscal)
+    let base64NF = "";
     const inputNF = document.getElementById('inputNF'); 
     
     if (inputNF && inputNF.files && inputNF.files.length > 0) {
-        urlNF = await ManutencaoModel.uploadNF(inputNF.files[0]);
+        // Se você usa Base64 (mais simples para o seu fluxo atual)
+        base64NF = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(inputNF.files[0]);
+            reader.onload = () => resolve(reader.result);
+        });
     }
 
-    // 2. Monta os dados exatamente como seu banco espera
+    // 2. Montagem dos Dados (Batendo com a View e o Banco)
     const dados = {
         cidade: document.getElementById('cidadeOS').value,
         tecnico: document.getElementById('tecnicoOS').value,
@@ -61,12 +67,12 @@ document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
         hora_inicio: horaInicioReal || new Date().toISOString(),
         hora_conclusao: new Date().toISOString(),
         valor_mao_de_obra: parseFloat(document.getElementById('valorMaoObra').value) || 0,
-        valor_materiais: parseFloat(document.getElementById('valorMateriais').value) || 0,
-        url_nota_fiscal: urlNF,
+        valor_gasto: parseFloat(document.getElementById('valorMateriais').value) || 0, // Alinhado com a View
+        foto_nf: base64NF, // Alinhado com a View
         status: 'Concluido'
     };
 
-    // 3. Salva no Banco
+    // 3. Salva no Banco via Model
     const { error } = await ManutencaoModel.salvarNoBanco(dados);
     
     if (!error) {

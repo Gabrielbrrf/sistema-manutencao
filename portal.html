@@ -78,27 +78,33 @@
     <div class="grid" id="grid-sistemas">
         <a href="01_Gestao_Pix/index.html" id="card-pix" class="card">
             <span>💰</span>
-            <strong>Gestão PIX</strong>
+            <strong>Contatos PIX</strong>
         </a>
 
-        <a href="02_Financeiro_NF/index.html" id="card-financeiro" class="card">
-            <span>📑</span>
-            <strong>Financeiro SHB</strong>
+        <a href="04_Pagamento_Faxina/index.html" id="card-faxina" class="card">
+            <span>🧹</span>
+            <strong>Pagamento Faxina</strong>
         </a>
 
-        <a href="#" id="card-manutencao" class="card">
+        <a href="03_Manutencao/manutencao.html" id="card-manutencao" class="card">
             <span>🛠️</span>
             <strong>Manutenção OS</strong>
         </a>
 
-        <a href="#" id="card-ponto" class="card">
-            <span>⏱️</span>
-            <strong>Ponto de Início</strong>
+        <a href="02_Financeiro_NF/index.html" id="card-financeiro" class="card">
+            <span>📑</span>
+            <strong>Arquivo de Notas</strong>
         </a>
 
-        <a href="#" id="card-faxina" class="card vago"><span>🔒</span><strong>Pagamento Faxina</strong></a>
-        <a href="#" id="card-studio" class="card vago"><span>🔒</span><strong>Studio Clean</strong></a>
-        <a href="#" id="card-newbyte" class="card vago"><span>🔒</span><strong>NewByte Tech</strong></a>
+        <a href="04_Pagamento_Faxina/relatorio.html" id="card-relatorio" class="card">
+            <span>📊</span>
+            <strong>Relatório Geral</strong>
+        </a>
+
+        <a href="meu_ponto.html" id="card-ponto" class="card">
+            <span>⏱️</span>
+            <strong>Meu Ponto</strong>
+        </a>
     </div>
 
     <a href="loguim.html" class="logout-link" onclick="localStorage.removeItem('usuarioLogado')">Sair do Sistema</a>
@@ -112,49 +118,44 @@
                 return;
             }
 
-            // 1. Identifica o papel do usuário
-            const eTecnico = ['israel_sillas', 'wil_sampaio'].includes(usuarioLogado.loguim) || usuarioLogado.empresa === 'TECNICO';
-            const cardManutencao = document.getElementById('card-manutencao');
+            const nivel = usuarioLogado.empresa; // MASTER, MANUTENCAO ou OPERACIONAL
+            const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
+            
+            document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
 
-            if (eTecnico) {
-                // VISÃO DO TÉCNICO
-                document.getElementById('boas-vindas').innerText = "PAINEL DO TÉCNICO: " + usuarioLogado.nome.split(' ')[0].toUpperCase();
-                
-                // Direciona técnico para a lista de tarefas dele
-                cardManutencao.href = "manutencao.html";
+            // Função para esconder o que não deve ser visto
+            const esconder = (id) => { 
+                const el = document.getElementById(id);
+                if(el) el.style.display = 'none'; 
+            };
 
-                // ESCONDER o que técnico não vê
-                document.getElementById('card-pix').style.display = 'none';
-                document.getElementById('card-financeiro').style.display = 'none';
-                document.getElementById('card-faxina').style.display = 'none';
-                document.getElementById('card-studio').style.display = 'none';
-                document.getElementById('card-newbyte').style.display = 'none';
-                
-                // Configurar Card de Ponto
-                const cardPonto = document.getElementById('card-ponto');
-                cardPonto.onclick = () => {
-                    alert("Ponto iniciado para " + usuarioLogado.nome + " às " + new Date().toLocaleTimeString());
-                };
+            // CONTROLE DE ACESSO POR NÍVEL
+            if (nivel === 'MASTER' || nivel === 'ADM') {
+                // MASTER vê tudo, não precisa esconder nada.
+                // Ajustamos apenas links específicos se necessário
+                document.getElementById('card-ponto').href = "relatorios_gerais.html"; // Ver pontos de todos
             } 
-            else {
-                // VISÃO DO ADMINISTRADOR
-                document.getElementById('boas-vindas').innerText = "PORTAL ADMINISTRATIVO";
+            
+            else if (nivel === 'OPERACIONAL') {
+                // FAXINEIRAS: Só veem Ponto e Orientações (se houver)
+                esconder('card-pix');
+                esconder('card-financeiro');
+                esconder('card-manutencao');
+                esconder('card-relatorio');
+                esconder('card-faxina'); // Elas não calculam o próprio pagamento
                 
-                // Direciona ADM para a tela de criar e gerenciar OS
-                cardManutencao.href = "manutencao_adm.html";
-
-                ativarCard('card-faxina', '🧹', '04_Pagamento_Faxina/index.html');
-                ativarCard('card-studio', '✨', '05_Studio_Clean/index.html');
-                ativarCard('card-newbyte', '💻', '06_NewByte/index.html');
+                document.getElementById('card-ponto').href = "ponto_faxina.html";
             }
-        }
 
-        function ativarCard(id, emoji, link) {
-            const el = document.getElementById(id);
-            if(el) {
-                el.classList.remove('vago');
-                el.href = link;
-                el.querySelector('span').innerText = emoji;
+            else if (nivel === 'MANUTENCAO') {
+                // TÉCNICOS: Veem Ordens de Serviço e o próprio Ponto
+                esconder('card-pix');
+                esconder('card-financeiro');
+                esconder('card-faxina');
+                esconder('card-relatorio');
+                
+                document.getElementById('card-manutencao').href = "03_Manutencao/manutencao.html";
+                document.getElementById('card-ponto').href = "meu_ponto.html";
             }
         }
     </script>

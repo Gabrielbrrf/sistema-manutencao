@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório Geral de Pagamentos</title>
+    <link rel="stylesheet" href="style_global.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="background: #121212; color: white; padding: 20px;">
+
+    <header>
+        <h1 style="color: #d4af37;">Resumo de Pagamentos e Horas</h1>
+        <button class="badge-pix" onclick="window.location.href='portal.html'">Voltar ao Portal</button>
+    </header>
+
+    <div class="card" style="margin-bottom: 20px;">
+        <label>Selecionar Mês:</label>
+        <select id="filtroMes" onchange="carregarRelatorios()" style="background: #1e1e1e; color: white;">
+            <option value="01">Janeiro</option>
+            <option value="02" selected>Fevereiro</option>
+            <option value="03">Março</option>
+            </select>
+    </div>
+
+    <div class="container" style="background: #1e1e1e; margin-bottom: 30px;">
+        <h2 style="color: #3498db;">🛠️ Manutenção (Israel & Wil)</h2>
+        <div id="lista-manutencao">
+            </div>
+    </div>
+
+    <div class="container" style="background: #1e1e1e;">
+        <h2 style="color: #27ae60;">🧹 Faxina / Operacional</h2>
+        <div id="lista-faxina">
+            </div>
+    </div>
+
+    <script>
+        // Use a sua config do Supabase aqui
+        const _supabase = supabase.createClient('URL', 'KEY');
+
+        async function carregarRelatorios() {
+            const mes = document.getElementById('filtroMes').value;
+            
+            // 1. BUSCAR MANUTENÇÃO
+            const { data: manut } = await _supabase
+                .from('ordens_servico')
+                .select('*')
+                .eq('status', 'Concluido');
+
+            // 2. BUSCAR FAXINA
+            const { data: faxina } = await _supabase
+                .from('pagamentos_realizados')
+                .select('*');
+
+            renderizarManutencao(manut, mes);
+            renderizarFaxina(faxina, mes);
+        }
+
+        function renderizarManutencao(dados, mes) {
+            const container = document.getElementById('lista-manutencao');
+            let resumo = {};
+
+            dados.forEach(os => {
+                const mesOS = os.data_execucao.split('-')[1];
+                if (mesOS !== mes) return;
+
+                if (!resumo[os.tecnico]) {
+                    resumo[os.tecnico] = { maoObra: 0, materiais: 0, horas: 0 };
+                }
+
+                resumo[os.tecnico].maoObra += os.valor_mao_de_obra || 0;
+                resumo[os.tecnico].materiais += os.valor_gasto || 0;
+
+                // Cálculo de Horas
+                if (os.hora_inicio && os.hora_conclusao) {
+                    const diff = new Date(os.hora_conclusao) - new Date(os.hora_inicio);
+                    resumo[os.tecnico].horas += (diff / 1000 / 60 / 60); // Converte para horas decimais
+                }
+            });
+
+            container.innerHTML = "";
+            for (let t in resumo) {
+                container.innerHTML += `
+                    <div style="padding: 15px; border-bottom: 1px solid #333;">
+                        <strong style="font-size: 18px;">${t}</strong><br>
+                        ⏱️ Total Horas: ${resumo[t].horas.toFixed(1)}h | 
+                        💰 Mão de Obra: R$ ${resumo[t].maoObra.toFixed(2)} | 
+                        📦 Reembolso: R$ ${resumo[t].materiais.toFixed(2)}
+                    </div>
+                `;
+            }
+        }
+
+        function renderizarFaxina(dados, mes) {
+            const container = document.getElementById('lista-faxina');
+            let total = 0;
+            container.innerHTML = "";
+
+            dados.forEach(f => {
+                // Filtro de data simples aqui
+                container.innerHTML += `
+                    <div style="padding: 10px; border-bottom: 1px solid #333;">
+                        ${f.nome_faxineira} - ${f.apartamentos} - <b>R$ ${f.valor_total.toFixed(2)}</b>
+                    </div>
+                `;
+            });
+        }
+
+        carregarRelatorios();
+    </script>
+</body>
+</html>

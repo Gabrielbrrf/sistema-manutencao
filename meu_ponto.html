@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Meu Ponto e Horas</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; text-align: center; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
+        .btn-ponto { background: #d4af37; color: black; border: none; padding: 20px; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; max-width: 300px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border-bottom: 1px solid #333; font-size: 14px; }
+        th { background: #333; color: #d4af37; }
+        .banco-horas { font-size: 24px; color: #2ecc71; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <h2>⏱️ Controle de Ponto</h2>
+    
+    <div class="card">
+        <div id="relogio" style="font-size: 30px; margin-bottom: 10px;">00:00:00</div>
+        <button class="btn-ponto" onclick="registrarPonto()">BATER PONTO AGORA</button>
+    </div>
+
+    <div class="card">
+        <h3>Resumo do Mês</h3>
+        <div class="banco-horas" id="total-horas">00:00</div>
+        <p>Total de Horas Trabalhadas</p>
+    </div>
+
+    <div class="card">
+        <h3>Histórico Recente</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Entrada</th>
+                    <th>Saída</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-ponto">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        const _supabase = supabase.createClient('SUA_URL', 'SUA_KEY');
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+
+        // Atualiza o relógio na tela
+        setInterval(() => {
+            document.getElementById('relogio').innerText = new Date().toLocaleTimeString();
+        }, 1000);
+
+        async function registrarPonto() {
+            const agora = new Date();
+            const dataHoje = agora.toISOString().split('T')[0];
+            const horaAtual = agora.toLocaleTimeString('pt-BR', { hour12: false });
+
+            // Busca se já tem ponto hoje
+            const { data: pontos } = await _supabase
+                .from('registro_ponto')
+                .select('*')
+                .eq('loguim_usuario', usuario.loguim)
+                .eq('data', dataHoje)
+                .single();
+
+            if (!pontos) {
+                // Primeiro ponto do dia (Entrada)
+                await _supabase.from('registro_ponto').insert([{
+                    loguim_usuario: usuario.loguim,
+                    nome: usuario.nome,
+                    data: dataHoje,
+                    entrada: horaAtual,
+                    status: 'Aberto'
+                }]);
+                alert("Entrada registrada! Bom trabalho. 🚀");
+            } else if (pontos.status === 'Aberto') {
+                // Segundo ponto do dia (Saída)
+                await _supabase.from('registro_ponto').update({
+                    saida: horaAtual,
+                    status: 'Finalizado'
+                }).eq('id', pontos.id);
+                alert("Saída registrada! Até logo. 👋");
+            } else {
+                alert("Você já completou seu turno de hoje!");
+            }
+            carregarHistorico();
+        }
+
+        async function carregarHistorico() {
+            const { data } = await _supabase
+                .from('registro_ponto')
+                .select('*')
+                .eq('loguim_usuario', usuario.loguim)
+                .order('data', { ascending: false });
+
+            const tabela = document.getElementById('tabela-ponto');
+            tabela.innerHTML = '';
+            
+            data.forEach(p => {
+                tabela.innerHTML += `
+                    <tr>
+                        <td>${p.data}</td>
+                        <td>${p.entrada || '--:--'}</td>
+                        <td>${p.saida || '--:--'}</td>
+                        <td>${p.status === 'Finalizado' ? 'Calculando...' : 'Em aberto'}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        carregarHistorico();
+    </script>
+</body>
+</html>

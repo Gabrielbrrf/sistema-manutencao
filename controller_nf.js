@@ -3,6 +3,7 @@ import { ViewNF } from './view_nf.js';
 
 const btnSalvar = document.getElementById('btn-salvar-nf');
 
+// Salvar Nova Nota
 if (btnSalvar) {
     btnSalvar.onclick = async () => {
         const file = document.getElementById('nf-file').files[0];
@@ -10,45 +11,53 @@ if (btnSalvar) {
 
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = () => {
+        reader.onload = async () => {
             const novaNota = {
-                id: Date.now().toString(),
                 apto: document.getElementById('nf-apto').value,
                 data: document.getElementById('nf-data').value,
-                valor: document.getElementById('nf-valor').value,
+                valor: parseFloat(document.getElementById('nf-valor').value) || 0,
                 manutencao: document.getElementById('nf-manutencao').value,
-                arquivo: reader.result
+                arquivo: reader.result // Base64
             };
-            ModelNF.adicionarNota(novaNota);
-            alert("Nota salva!");
-            location.reload();
+            
+            const { success, error } = await ModelNF.adicionarNota(novaNota);
+            if (success) {
+                alert("Nota salva no banco de dados!");
+                location.reload();
+            } else {
+                alert("Erro ao salvar: " + error.message);
+            }
         };
     };
 }
 
-window.abrirDocumento = (id) => {
-    const nota = ModelNF.notas.find(n => n.id === id);
+// Global para abrir o documento (Busca no banco antes de abrir)
+window.abrirDocumento = async (id) => {
+    const notas = await ModelNF.listarNotas();
+    const nota = notas.find(n => n.id == id);
     if (nota) ViewNF.mostrarModal(nota);
 };
 
-window.filtrarMes = (mes) => {
-    const filtradas = ModelNF.getNotasPorMes(mes);
+// Global para filtrar (Agora busca do Supabase)
+window.filtrarMes = async (mes) => {
+    const grid = document.getElementById('grid-nfs');
+    grid.innerHTML = "<p>Carregando notas...</p>";
+    
+    const filtradas = await ModelNF.getNotasPorMes(mes);
     ViewNF.renderizarLista(filtradas);
 };
 
-window.deletarNota = (id) => {
-    if (confirm("Deseja apagar esta nota?")) {
-        ModelNF.excluirNota(id);
-        alert("Nota excluída!");
-        location.reload();
+window.deletarNota = async (id) => {
+    if (confirm("Deseja apagar esta nota permanentemente?")) {
+        const { success } = await ModelNF.excluirNota(id);
+        if (success) {
+            alert("Nota excluída!");
+            location.reload();
+        }
     }
 };
 
-const btnFechar = document.getElementById('close-modal');
-if (btnFechar) {
-    btnFechar.onclick = () => {
-        const modal = document.getElementById('modal-nota');
-        modal.style.display = "none";
-        modal.classList.add('hidden');
-    };
-}
+// Fechar Modal
+document.getElementById('close-modal')?.addEventListener('click', () => {
+    document.getElementById('modal-nota').style.display = "none";
+});
