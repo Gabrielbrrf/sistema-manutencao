@@ -6,16 +6,6 @@
     <title>Login - Super Host Brasil</title>
     <link rel="stylesheet" href="loguim.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-    (function() {
-        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-        // Se não for MASTER, expulsa para o portal
-        if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
-            alert("Área Restrita!");
-            window.location.href = "../portal.html";
-        }
-    })();
-</script>
 </head>
 <body>
 
@@ -42,10 +32,10 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        async function tentarLogin() {
-            // Limpa qualquer lixo de login anterior
-            localStorage.removeItem('usuarioLogado');
+        // Se o cara já estiver logado e cair aqui, a gente limpa pra não dar conflito
+        localStorage.removeItem('usuarioLogado');
 
+        async function tentarLogin() {
             const userField = document.getElementById('user').value.trim();
             const passField = document.getElementById('pass').value.trim();
 
@@ -54,27 +44,34 @@
                 return;
             }
 
-            const { data, error } = await _supabase
-                .from('colaboradores')
-                .select('*')
-                .eq('loguim', userField) 
-                .eq('senha', passField)
-                .eq('ativo', true)
-                .single();
+            try {
+                const { data, error } = await _supabase
+                    .from('colaboradores')
+                    .select('*')
+                    .eq('loguim', userField) 
+                    .eq('senha', passField)
+                    .eq('ativo', true)
+                    .single();
 
-            if (error || !data) {
-                alert("Usuário ou senha incorretos!");
-                return;
+                if (error || !data) {
+                    alert("Usuário ou senha incorretos!");
+                    return;
+                }
+
+                // Salva os dados no navegador
+                localStorage.setItem('usuarioLogado', JSON.stringify({
+                    nome: data.nome,
+                    loguim: data.loguim,
+                    empresa: data.empresa 
+                }));
+
+                // Redireciona para o portal
+                window.location.href = 'portal.html';
+
+            } catch (err) {
+                console.error("Erro:", err);
+                alert("Erro ao conectar com o banco de dados.");
             }
-
-            // Salva os dados REAIS do banco (MASTER, MANUTENCAO ou OPERACIONAL)
-            localStorage.setItem('usuarioLogado', JSON.stringify({
-                nome: data.nome,
-                loguim: data.loguim,
-                empresa: data.empresa 
-            }));
-
-            window.location.href = 'portal.html';
         }
     </script>
 </body>
