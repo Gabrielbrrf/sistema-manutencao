@@ -15,17 +15,17 @@ const ManutencaoView = {
     renderizarLista(ordens) {
         const container = document.getElementById('conteudoLista');
         if (!container) return;
-        container.innerHTML = ordens.length ? "" : "<p>Nenhuma OS realizada.</p>";
+        container.innerHTML = ordens.length ? "" : "<p style='text-align:center; color:#666;'>Nenhuma OS realizada hoje.</p>";
         
         ordens.forEach(os => {
-            // Formata Data
+            // Formata Data (Ex: 15/02)
             const dataF = os.data_execucao ? os.data_execucao.split('-').reverse().slice(0,2).join('/') : "--/--";
             
-            // Formata Horas
+            // Formata Horas (Ex: 14:30)
             const hInicio = os.hora_inicio ? new Date(os.hora_inicio).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : "--:--";
             const hFim = os.hora_conclusao ? new Date(os.hora_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : "--:--";
 
-            // Calcula Duração
+            // Calcula Duração do Trabalho
             let duracaoTexto = "";
             if (os.hora_inicio && os.hora_conclusao) {
                 const diff = new Date(os.hora_conclusao) - new Date(os.hora_inicio);
@@ -35,39 +35,48 @@ const ManutencaoView = {
                     : `${minutos} min`;
             }
 
-            // Define cor por cidade (Mantendo seu padrão)
+            // Cor por cidade: Santos (Azul) / Guarujá (Roxo)
             const corCidade = os.cidade?.toLowerCase() === 'santos' ? '#007bff' : '#6f42c1';
             
-            // LÓGICA DA NOTA FISCAL: Se tiver foto_nf, mostra o botão de ver nota
+            // LÓGICA DA NOTA FISCAL: Mostra o botão verde apenas se tiraram foto
             const botaoNF = os.foto_nf 
-                ? `<button onclick="ManutencaoView.abrirModalNF('${os.foto_nf}')" style="background: #27ae60; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-top: 5px;">📄 VER NOTA (R$ ${os.valor_gasto || '0,00'})</button>` 
+                ? `<button onclick="ManutencaoView.abrirModalNF('${os.foto_nf}')" style="background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; margin-top: 8px; font-weight: bold;">📄 VER NOTA (R$ ${os.valor_gasto || '0,00'})</button>` 
                 : "";
 
             container.insertAdjacentHTML('beforeend', `
-                <div class="card" style="border-left: 5px solid ${corCidade}; margin-bottom: 12px; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); color: #333;">
+                <div class="card" style="border-left: 5px solid ${corCidade}; margin-bottom: 12px; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: #333;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div style="flex: 1;">
-                            <strong style="font-size: 16px;">${os.tecnico}</strong> - ${os.cidade?.toUpperCase()} (${os.apto})<br>
-                            <span style="color: #666; font-size: 13px;">${os.descricao_servico}</span><br>
+                            <strong style="font-size: 15px; color: #1e293b;">${os.tecnico}</strong> 
+                            <span style="font-size: 12px; color: #64748b;"> • ${os.cidade?.toUpperCase()} (${os.apto})</span><br>
                             
-                            <div style="margin-top: 5px; font-size: 12px; color: #444;">
-                                📅 <b>${dataF}</b> | 🕒 <b>${hInicio} às ${hFim}</b> 
-                                <span style="background: #eef2ff; padding: 2px 6px; border-radius: 4px; margin-left: 5px; color: #4338ca;">
+                            <p style="margin: 5px 0; font-size: 14px; color: #475569;">${os.descricao_servico}</p>
+                            
+                            <div style="margin-top: 8px; font-size: 11px; color: #64748b; display: flex; align-items: center; gap: 8px;">
+                                <span>📅 <b>${dataF}</b></span>
+                                <span>🕒 <b>${hInicio} às ${hFim}</b></span>
+                                <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #4338ca; font-weight: bold;">
                                     ⏱️ ${duracaoTexto}
                                 </span>
                             </div>
                             ${botaoNF}
                         </div>
-                        <button onclick="ManutencaoController.deletarOS('${os.id}')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px; margin-left: 10px;">🗑️</button>
+                        <button onclick="ManutencaoController.deletarOS('${os.id}')" style="background: #fff1f2; border: none; color: #e11d48; cursor: pointer; font-size: 16px; padding: 8px; border-radius: 8px; margin-left: 10px;">🗑️</button>
                     </div>
                 </div>
             `);
         });
     },
 
-    // Função para abrir a imagem da NF em uma nova aba ou modal
+    // Abre a imagem da nota fiscal em tela cheia
     abrirModalNF(base64) {
         const novaJanela = window.open();
-        novaJanela.document.write(`<img src="${base64}" style="max-width: 100%; height: auto;" />`);
+        novaJanela.document.write(`
+            <html>
+                <body style="margin:0; background: #000; display: flex; align-items: center; justify-content: center;">
+                    <img src="${base64}" style="max-width: 100%; max-height: 100vh; object-fit: contain;" />
+                </body>
+            </html>
+        `);
     }
 };
