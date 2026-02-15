@@ -15,8 +15,7 @@ const ManutencaoModel = {
             const { data, error } = await window._supabase
                 .from('colaboradores') 
                 .select('nome')
-                // Se quiser garantir que só apareçam os dois mesmo que entrem novos, 
-                // podemos manter o backup ou filtrar por nome aqui
+                // Garante que só apareçam os dois técnicos de campo
                 .in('nome', ['Israel Sillas', 'Wil Sampaio']) 
                 .order('nome');
             
