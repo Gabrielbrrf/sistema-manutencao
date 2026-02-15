@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Super Host Brasil</title>
     <link rel="stylesheet" href="loguim.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="model_os.js"></script>
 </head>
 <body>
 
@@ -31,24 +33,49 @@
     </div>
 
     <script>
-        function tentarLogin() {
-            const user = document.getElementById('user').value;
-            const pass = document.getElementById('pass').value;
+        async function tentarLogin() {
+            const userLogin = document.getElementById('user').value;
+            const userPass = document.getElementById('pass').value;
 
-            // --- NOSSO "BANCO DE DADOS" DE ACESSOS ---
-            const db_usuarios = {
-                "superhost": { senha: "123", empresa: "SuperHost" },
-                "studioclean": { senha: "321", empresa: "StudioClean" },
-                "newbyte": { senha: "456", empresa: "NewByte" }
-            };
+            if (!userLogin || !userPass) {
+                alert("Preencha todos os campos!");
+                return;
+            }
 
-            const usuarioEncontrado = db_usuarios[user.toLowerCase()];
+            // Verifica se o objeto _supabase existe (carregado do model_os.js)
+            if (!window._supabase) {
+                alert("Erro: Conexão com Supabase não encontrada.");
+                return;
+            }
 
-            if (usuarioEncontrado && usuarioEncontrado.senha === pass) {
-                localStorage.setItem('usuarioLogado', JSON.stringify(usuarioEncontrado));
-                window.location.href = "portal.html";
-            } else {
-                alert("❌ Acesso negado! Verifique usuário e senha.");
+            try {
+                // Busca o colaborador no Supabase (ajustado para a sua coluna 'loguim')
+                const { data, error } = await window._supabase
+                    .from('colaboradores')
+                    .select('nome, loguim, ativo')
+                    .eq('loguim', userLogin) 
+                    .eq('senha', userPass)
+                    .eq('ativo', true)
+                    .single();
+
+                if (data) {
+                    // Salva os dados no formato que o seu novo PORTAL espera
+                    localStorage.setItem('usuarioLogado', JSON.stringify({
+                        nome: data.nome,
+                        loguim: data.loguim,
+                        empresa: 'TECNICO' // Define como técnico para filtrar o menu
+                    }));
+                    
+                    // Salva também o nome solto para a sua OS antiga não quebrar
+                    localStorage.setItem('tecnico_nome', data.nome);
+                    
+                    window.location.href = 'portal.html';
+                } else {
+                    alert("Usuário, senha incorretos ou acesso negado!");
+                }
+            } catch (err) {
+                console.error("Erro no login:", err);
+                alert("Erro ao conectar com o servidor.");
             }
         }
     </script>
