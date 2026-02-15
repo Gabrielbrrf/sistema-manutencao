@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manutenção OS - Super Host</title>
+    <link rel="stylesheet" href="../style_global.css"> 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Manutenção - Ordem de Serviço</h1>
+            <button class="badge-pix" onclick="window.location.href='../portal.html'">Voltar</button>
+        </header>
+
+        <section class="form-grid-vertical card">
+            <div style="display: flex; gap: 10px;">
+                <select id="cidadeOS" style="flex: 1;">
+                    <option value="">Cidade</option>
+                    <option value="santos">Santos</option>
+                    <option value="guaruja">Guarujá</option>
+                </select>
+                <select id="tecnicoOS" style="flex: 1;">
+                    <option value="">Carregando técnicos...</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="enderecoOS" placeholder="Condomínio/Endereço" style="flex: 3;">
+                <input type="text" id="aptoOS" placeholder="Apto" style="flex: 1;">
+            </div>
+            <input type="text" id="servicoOS" placeholder="Descrição detalhada do serviço">
+            
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <label style="font-size: 11px; font-weight: bold;">HÓSPEDE?</label>
+                <select id="hospedeStatusOS" style="flex: 1; min-width: 100px;">
+                    <option value="Sim">Sim</option>
+                    <option value="Não">Não</option>
+                    <option value="Permitiu Entrada">Permitiu Entrada</option>
+                </select>
+                <input type="date" id="dataOS" style="flex: 1;">
+                <input type="time" id="horaEstimadaOS" style="flex: 1;">
+            </div>
+
+            <div id="secaoFinanceiraOS" style="display: none; margin-top: 15px; background: #f0f7ff; padding: 15px; border-radius: 8px; border: 2px dashed #2563eb;">
+                <h3 style="font-size: 14px; margin-top: 0; color: #1e40af;">💰 Financeiro e NF</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="number" id="valorMaoObra" placeholder="Mão de Obra R$">
+                    <input type="number" id="valorMateriais" placeholder="Materiais R$">
+                </div>
+                <input type="file" id="inputNF" accept="image/*" capture="camera">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn-salvar" id="btnIniciarOS" style="background: #10b981; flex: 1;">▶️ Iniciar Serviço</button>
+                <button class="btn-salvar" id="btnGerarOS" style="background: #2563eb; flex: 1; display: none;">✅ Salvar e Finalizar</button>
+            </div>
+        </section>
+
+        <div id="listaOS" style="margin-top: 25px;">
+            <h3 style="font-size: 16px;">Ordens Realizadas</h3>
+            <div id="conteudoLista"></div>
+        </div>
+    </div>
+
+<script src="model_os.js"></script>
+<script src="view_os.js"></script>
+<script src="controller_os.js"></script>
+</body>
+</html>

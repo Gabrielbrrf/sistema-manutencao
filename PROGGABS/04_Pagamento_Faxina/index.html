@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento Faxina - PROGGABS</title>
+    <link rel="stylesheet" href="../style_global.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // 2. CONFIGURAÇÃO DE CONEXÃO
+        const supabaseUrl = 'https://olawjagrfhcxsonmyopi.supabase.co';
+        
+        // Sua chave anon colada aqui para liberar o acesso:
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY'; 
+        
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    </script>
+    <script>
+    (function() {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        // Se não for MASTER, expulsa para o portal
+        if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
+            alert("Área Restrita!");
+            window.location.href = "../portal.html";
+        }
+    })();
+</script>
+</head>
+<body>
+    <div class="container">
+        <header>
+    <h1>Calculadora de Faxina</h1>
+    <div style="display: flex; gap: 10px;">
+        <button class="badge-pix" onclick="window.location.href='../05_Relatorio_Faxina/relatorio.html'" style="background: #2563eb;">📊 Relatórios</button>
+        <button class="badge-pix" onclick="window.location.href='../portal.html'">Voltar</button>
+    </div>
+</header>
+
+        <section class="form-grid-vertical">
+            <div style="display: flex; gap: 10px;">
+                <select id="cidadeFaxina" style="flex: 1;">
+                    <option value="guaruja">Guarujá</option>
+                    <option value="santos">Santos</option>
+                </select>
+                <select id="tipoFaxina" style="flex: 1;">
+                    <option value="Freelance">Freelance</option>
+                    <option value="CLT">CLT</option>
+                </select>
+            </div>
+
+            <select id="selectFaxineira">
+                <option value="">Carregando faxineiras...</option>
+            </select>
+
+            <label style="font-size: 11px; font-weight: bold; margin-top: 10px;">CÓDIGOS DOS APTOS (Separe com espaço ou vírgula):</label>
+            <textarea id="listaCodigos" placeholder="Ex: AQ15 PA71 CA82" style="height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-family: monospace; text-transform: uppercase;"></textarea>
+
+            <div id="boxResultado" style="background: #f0fdf4; padding: 20px; border-radius: 12px; border: 2px solid #bbf7d0; margin-top: 15px; text-align: center;">
+                <span style="display: block; font-size: 12px; color: #166534; font-weight: bold;">
+                    TOTAL PARA PAGAMENTO ( <span id="qtdAptos">0</span> Aptos )
+                </span>
+                <strong id="valorTotal" style="font-size: 32px; color: #15803d; display: block; margin: 5px 0;">R$ 0,00</strong>
+                
+                <div id="alertaErro" style="margin-top: 10px; font-size: 11px; color: #b91c1c; background: #fee2e2; padding: 8px; border-radius: 6px; display: none; border: 1px solid #fecaca;"></div>
+            </div>
+
+            <button class="btn-salvar" id="btnGerarComprovante">Gerar Comprovante / WhatsApp</button>
+        </section>
+
+        <details style="margin-top: 30px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <summary style="cursor: pointer; font-weight: bold; font-size: 13px; color: #475569;">⚙️ Gerenciar Banco de Preços</summary>
+            <div style="display: flex; gap: 5px; margin-top: 10px;">
+                <input type="text" id="novoCod" placeholder="Cód: AQ15" style="flex: 1; text-transform: uppercase;">
+                <input type="number" id="novoPreco" placeholder="R$ Valor" style="flex: 1;">
+                <button onclick="salvarPreco()" style="background: #1e293b; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Salvar no Banco</button>
+            </div>
+            <p style="font-size: 10px; color: #94a3b8; margin-top: 8px;">* Ao salvar, o valor é atualizado para todos os usuários do sistema.</p>
+        </details>
+    </div>
+
+    <script src="model_faxina.js"></script>
+    <script src="view_faxina.js"></script>
+    <script src="controller_faxina.js"></script>
+</body>
+</html>

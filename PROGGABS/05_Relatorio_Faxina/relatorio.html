@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Gastos - SHB</title>
+    <link rel="stylesheet" href="../style_global.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+    (function() {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        // Se não for MASTER, expulsa para o portal
+        if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
+            alert("Área Restrita!");
+            window.location.href = "../portal.html";
+        }
+    })();
+</script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Relatório de Gastos</h1>
+            <button class="badge-pix" onclick="window.location.href='../portal.html'">Voltar ao Menu</button>       
+        </header>
+
+        <div id="resumoGeral" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+            <div class="card" style="background: #eff6ff; padding: 15px; border-radius: 8px; text-align: center;">
+                <span style="font-size: 12px; color: #1e40af;">FAXINA (TOTAL)</span>
+                <strong id="totalFaxinaGeral" style="display: block; font-size: 20px; color: #1e3a8a;">R$ 0,00</strong>
+            </div>
+            <div class="card" style="background: #fdf2f2; padding: 15px; border-radius: 8px; text-align: center;">
+                <span style="font-size: 12px; color: #991b1b;">MANUTENÇÃO (TOTAL)</span>
+                <strong id="totalManutGeral" style="display: block; font-size: 20px; color: #991b1b;">R$ 0,00</strong>
+            </div>
+        </div>
+
+        <section style="background: #fffafa; padding: 15px; border-radius: 10px; border: 1px solid #fecaca; margin-bottom: 25px;">
+            <h3 style="color: #b91c1c;">🛠️ Banco de Horas & Manutenção</h3>
+            <div id="listaManutencao" style="margin-top: 10px;">
+                <p style="font-size: 13px; color: #666;">Carregando dados dos técnicos...</p>
+            </div>
+        </section>
+
+        <section>
+            <h3>📍 Faxina por Cidade</h3>
+            <div id="gastosCidade" style="margin-bottom: 20px;"></div>
+
+            <h3>👤 Por Faxineira</h3>
+            <div id="gastosFaxineira"></div>
+        </section>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://olawjagrfhcxsonmyopi.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function carregarRelatorios() {
+            // 1. BUSCAR DADOS DE FAXINA
+            const { data: dataFaxina } = await _supabase.from('pagamentos_realizados').select('*');
+            
+            // 2. BUSCAR DADOS DE MANUTENÇÃO
+            const { data: dataManut } = await _supabase.from('ordens_servico').select('*').eq('status', 'Concluido');
+
+            processarFaxina(dataFaxina || []);
+            processarManutencao(dataManut || []);
+        }
+
+        function processarFaxina(data) {
+            let totalGeral = 0;
+            let cidades = {};
+            let faxineiras = {};
+
+            data.forEach(pg => {
+                totalGeral += pg.valor_total;
+                cidades[pg.cidade] = (cidades[pg.cidade] || 0) + pg.valor_total;
+                faxineiras[pg.nome_faxineira] = (faxineiras[pg.nome_faxineira] || 0) + pg.valor_total;
+            });
+
+            document.getElementById('totalFaxinaGeral').innerText = totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            let htmlCidade = '';
+            for (let c in cidades) {
+                htmlCidade += `<p><strong>${c.toUpperCase()}:</strong> R$ ${cidades[c].toFixed(2)}</p>`;
+            }
+            document.getElementById('gastosCidade').innerHTML = htmlCidade;
+
+            let htmlFax = '<table style="width:100%; border-collapse: collapse;">';
+            for (let f in faxineiras) {
+                htmlFax += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${f}</td><td style="text-align:right;"><strong>R$ ${faxineiras[f].toFixed(2)}</strong></td></tr>`;
+            }
+            htmlFax += '</table>';
+            document.getElementById('gastosFaxineira').innerHTML = htmlFax;
+        }
+
+        function processarManutencao(data) {
+            let totalMaoObra = 0;
+            let tecnicos = {};
+
+            data.forEach(os => {
+                if (!tecnicos[os.tecnico]) {
+                    tecnicos[os.tecnico] = { horas: 0, mo: 0, mat: 0 };
+                }
+
+                tecnicos[os.tecnico].mo += os.valor_mao_de_obra || 0;
+                tecnicos[os.tecnico].mat += os.valor_gasto || 0;
+                totalMaoObra += (os.valor_mao_de_obra + os.valor_gasto);
+
+                // Cálculo de Horas
+                if (os.hora_inicio && os.hora_conclusao) {
+                    const diff = new Date(os.hora_conclusao) - new Date(os.hora_inicio);
+                    tecnicos[os.tecnico].horas += (diff / 3600000); // Milisegundos para Horas
+                }
+            });
+
+            document.getElementById('totalManutGeral').innerText = totalMaoObra.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            let htmlManut = '<table style="width:100%; border-collapse: collapse; font-size: 14px;">';
+            htmlManut += '<tr style="background:#fee2e2;"> <th style="text-align:left; padding:5px;">Técnico</th> <th>Horas</th> <th>M.Obra</th> <th>NFs</th> </tr>';
+            
+            for (let t in tecnicos) {
+                htmlManut += `
+                    <tr style="border-bottom: 1px solid #fecaca;">
+                        <td style="padding: 8px;"><b>${t}</b></td>
+                        <td style="text-align:center;">${tecnicos[t].horas.toFixed(1)}h</td>
+                        <td style="text-align:center;">R$ ${tecnicos[t].mo.toFixed(2)}</td>
+                        <td style="text-align:center;">R$ ${tecnicos[t].mat.toFixed(2)}</td>
+                    </tr>`;
+            }
+            htmlManut += '</table>';
+            document.getElementById('listaManutencao').innerHTML = htmlManut;
+        }
+
+        carregarRelatorios();
+    </script>
+</body>
+</html>
