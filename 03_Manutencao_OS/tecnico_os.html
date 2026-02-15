@@ -3,100 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meus Serviços - Técnico</title>
+    <title>Técnico - Ordens de Serviço</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 15px; }
-        .card-servico { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid #2563eb; }
-        .status-pendente { background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .btn-iniciar { background: #10b981; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .secao-fechamento { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
-        input[type="number"], input[type="file"] { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        .btn-finalizar { background: #2563eb; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        body { font-family: sans-serif; background: #f1f5f9; padding: 20px; }
+        .container { max-width: 500px; margin: auto; }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h2 style="text-align:center; color:#1e293b;">🛠️ Meus Serviços</h2>
+        <div id="lista-chamados-tecnico"></div>
+    </div>
 
-    <h2 style="color: #1e293b;">🛠️ Meus Serviços</h2>
-    <div id="lista-chamados">Carregando seus chamados...</div>
-
-<script>
-    const SUPABASE_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    async function carregarChamados() {
-        // Puxa apenas o que está "Pendente" (o que você abriu na Master)
-        const { data, error } = await _supabase
-            .from('ordens_servico')
-            .select('*')
-            .eq('status', 'Pendente')
-            .order('id', { ascending: false });
-
-        const container = document.getElementById('lista-chamados');
-        container.innerHTML = data.length ? '' : '<p>Nenhum serviço pendente hoje! 🙌</p>';
-
-        data.forEach(os => {
-            container.innerHTML += `
-                <div class="card-servico" id="card-${os.id}">
-                    <strong>📍 ${os.cliente}</strong> <span class="status-pendente">ABERTO</span><br>
-                    <p style="margin: 8px 0; color: #475569;">📝 ${os.descricao_servico}</p>
-                    <small style="color: #94a3b8;">Responsável: ${os.tecnico}</small>
-                    
-                    <button class="btn-iniciar" id="btn-ini-${os.id}" onclick="iniciarServico(${os.id})">▶️ INICIAR TRABALHO</button>
-                    
-                    <div class="secao-fechamento" id="fechamento-${os.id}">
-                        <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #1e40af;">💰 Finalizar Serviço</h4>
-                        <input type="number" id="mao-obra-${os.id}" placeholder="Valor Mão de Obra R$">
-                        <input type="number" id="material-${os.id}" placeholder="Valor Materiais R$">
-                        <label style="font-size: 12px; font-weight: bold;">📸 Foto da Nota Fiscal:</label>
-                        <input type="file" id="foto-${os.id}" accept="image/*" capture="camera">
-                        <button class="btn-finalizar" onclick="finalizarServico(${os.id})">✅ SALVAR E CONCLUIR</button>
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    function iniciarServico(id) {
-        document.getElementById(`btn-ini-${id}`).style.display = 'none';
-        document.getElementById(`fechamento-${id}`).style.display = 'block';
-    }
-
-    async function finalizarServico(id) {
-        const maoObra = document.getElementById(`mao-obra-${id}`).value;
-        const material = document.getElementById(`material-${id}`).value;
-        const fotoInput = document.getElementById(`foto-${id}`);
-        
-        if (!maoObra) { alert("Informe pelo menos a mão de obra!"); return; }
-
-        let base64NF = "";
-        if (fotoInput.files.length > 0) {
-            const reader = new FileReader();
-            base64NF = await new Promise(resolve => {
-                reader.readAsDataURL(fotoInput.files[0]);
-                reader.onload = () => resolve(reader.result);
-            });
-        }
-
-        const { error } = await _supabase
-            .from('ordens_servico')
-            .update({ 
-                status: 'Concluido',
-                valor_mao_de_obra: parseFloat(maoObra),
-                valor_gasto: parseFloat(material || 0),
-                foto_nf: base64NF,
-                hora_conclusao: new Date().toISOString()
-            })
-            .eq('id', id);
-
-        if (!error) {
-            alert("✅ Serviço concluído e enviado para a Gabs!");
-            location.reload();
-        }
-    }
-
-    carregarChamados();
-</script>
+    <script src="logica_tecnico.js"></script>
 </body>
 </html>
