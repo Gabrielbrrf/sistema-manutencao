@@ -40,44 +40,43 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function tentarLogin() {
-            const userLogin = document.getElementById('user').value.trim();
-            const userPass = document.getElementById('pass').value.trim();
+    const userField = document.getElementById('user').value.trim();
+    const passField = document.getElementById('pass').value.trim();
 
-            if (!userLogin || !userPass) {
-                alert("Preencha todos os campos!");
-                return;
-            }
+    if (!userField || !passField) {
+        alert("Preencha todos os campos!");
+        return;
+    }
 
-            try {
-                // Busca o colaborador usando 'loguim' (coluna com 'u')
-                const { data, error } = await _supabase
-                    .from('colaboradores')
-                    .select('nome, loguim, ativo')
-                    .eq('loguim', userLogin) 
-                    .eq('senha', userPass)
-                    .eq('ativo', true)
-                    .single();
+    try {
+        // O segredo está aqui: batendo exatamente com a coluna 'loguim' da sua imagem
+        const { data, error } = await _supabase
+            .from('colaboradores')
+            .select('*')
+            .eq('loguim', userField) 
+            .eq('senha', passField)
+            .eq('ativo', true)
+            .single();
 
-                if (data) {
-                    // Salva os dados para o Portal
-                    localStorage.setItem('usuarioLogado', JSON.stringify({
-                        nome: data.nome,
-                        loguim: data.loguim,
-                        empresa: 'TECNICO' 
-                    }));
-                    
-                    // Salva para a compatibilidade com a OS
-                    localStorage.setItem('tecnico_nome', data.nome);
-                    
-                    window.location.href = 'portal.html';
-                } else {
-                    alert("Usuário ou senha incorretos (ou acesso desativado no banco)!");
-                }
-            } catch (err) {
-                console.error("Erro no login:", err);
-                alert("Erro ao conectar com o Supabase. Verifique sua internet.");
-            }
+        if (error) {
+            console.log("Erro do Supabase:", error.message);
+            alert("Usuário ou senha incorretos!");
+            return;
         }
+
+        if (data) {
+            localStorage.setItem('usuarioLogado', JSON.stringify({
+                nome: data.nome,
+                loguim: data.loguim,
+                empresa: 'TECNICO'
+            }));
+            window.location.href = 'portal.html';
+        }
+    } catch (err) {
+        console.error("Erro inesperado:", err);
+        alert("Erro de conexão. Tente novamente.");
+    }
+}
     </script>
 </body>
 </html>
