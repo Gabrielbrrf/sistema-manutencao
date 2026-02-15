@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Gastos - Faxina</title>
+    <link rel="stylesheet" href="../style_global.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Relatório de Gastos</h1>
+                <button class="badge-pix" onclick="window.location.href='../04_Pagamento_Faxina/index.html'">Voltar</button>       
+        </header>
+
+        <div id="resumoGeral" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+            <div class="card" style="background: #eff6ff; padding: 15px; border-radius: 8px; text-align: center;">
+                <span style="font-size: 12px; color: #1e40af;">TOTAL GERAL</span>
+                <strong id="totalGeral" style="display: block; font-size: 20px; color: #1e3a8a;">R$ 0,00</strong>
+            </div>
+            <div class="card" style="background: #f0fdf4; padding: 15px; border-radius: 8px; text-align: center;">
+                <span style="font-size: 12px; color: #166534;">TOTAL MÊS ATUAL</span>
+                <strong id="totalMes" style="display: block; font-size: 20px; color: #15803d;">R$ 0,00</strong>
+            </div>
+        </div>
+
+        <section>
+            <h3>📍 Por Cidade</h3>
+            <div id="gastosCidade" style="margin-bottom: 20px;"></div>
+
+            <h3>👤 Por Faxineira</h3>
+            <div id="gastosFaxineira"></div>
+        </section>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://olawjagrfhcxsonmyopi.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function carregarRelatorio() {
+            const { data, error } = await _supabase
+                .from('pagamentos_realizados')
+                .select('*');
+
+            if (error) return console.error(error);
+
+            let totalGeral = 0;
+            let cidades = {};
+            let faxineiras = {};
+
+            data.forEach(pg => {
+                totalGeral += pg.valor_total;
+
+                // Agrupa por Cidade
+                cidades[pg.cidade] = (cidades[pg.cidade] || 0) + pg.valor_total;
+
+                // Agrupa por Faxineira
+                faxineiras[pg.nome_faxineira] = (faxineiras[pg.nome_faxineira] || 0) + pg.valor_total;
+            });
+
+            document.getElementById('totalGeral').innerText = totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            
+            // Renderiza Cidades
+            let htmlCidade = '';
+            for (let c in cidades) {
+                htmlCidade += `<p><strong>${c.toUpperCase()}:</strong> R$ ${cidades[c].toFixed(2)}</p>`;
+            }
+            document.getElementById('gastosCidade').innerHTML = htmlCidade;
+
+            // Renderiza Faxineiras
+            let htmlFax = '<table style="width:100%; border-collapse: collapse;">';
+            for (let f in faxineiras) {
+                htmlFax += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${f}</td><td style="text-align:right;"><strong>R$ ${faxineiras[f].toFixed(2)}</strong></td></tr>`;
+            }
+            htmlFax += '</table>';
+            document.getElementById('gastosFaxineira').innerHTML = htmlFax;
+        }
+
+        carregarRelatorio();
+    </script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>ADM - Gestão de Manutenção</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #2c3e50; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        .form-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 6px; flex: 1; min-width: 180px; font-size: 14px; }
+        .btn-criar { background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-criar:hover { background: #219150; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
+        th, td { padding: 15px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #34495e; color: white; text-transform: uppercase; font-size: 12px; }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .pendente { background: #f1c40f; color: #000; }
+        .finalizado { background: #2ecc71; color: white; }
+        .btn-del { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>➕ Lançar Nova Ordem de Serviço</h2>
+        <div class="form-group">
+            <input type="text" id="cliente" placeholder="Nome do Cliente ou Local">
+            <input type="text" id="descricao" placeholder="O que precisa ser feito?">
+            <select id="tecnico_select">
+                <option value="">Selecionar Técnico...</option>
+                <option value="israel_sillas">Israel Sillas</option>
+                <option value="wil_sampaio">Wil Sampaio</option>
+            </select>
+            <button class="btn-criar" onclick="criarOS()">LANÇAR SERVIÇO</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📋 Monitoramento de Serviços (ADM)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Descrição</th>
+                    <th>Responsável</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="lista-geral-os">
+                <tr><td colspan="5">Carregando serviços...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // CONFIGURAÇÃO COM AS TUAS CHAVES REAIS
+        const SUPABASE_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function criarOS() {
+            const cliente = document.getElementById('cliente').value;
+            const descricao = document.getElementById('descricao').value;
+            const tecnico = document.getElementById('tecnico_select').value;
+
+            if (!cliente || !descricao || !tecnico) {
+                alert("Preencha todos os campos!");
+                return;
+            }
+
+            const { error } = await _supabase
+                .from('ordens_servico')
+                .insert([{ 
+                    cliente: cliente, 
+                    descricao: descricao, 
+                    tecnico_loguim: tecnico, 
+                    status: 'Pendente' 
+                }]);
+
+            if (!error) {
+                alert("OS Criada!");
+                document.getElementById('cliente').value = '';
+                document.getElementById('descricao').value = '';
+                carregarOS();
+            } else {
+                alert("Erro ao criar: " + error.message);
+            }
+        }
+
+        async function carregarOS() {
+            const { data, error } = await _supabase
+                .from('ordens_servico')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (error) return;
+
+            const tabela = document.getElementById('lista-geral-os');
+            tabela.innerHTML = '';
+
+            data.forEach(os => {
+                tabela.innerHTML += `
+                    <tr>
+                        <td><strong>${os.cliente}</strong></td>
+                        <td>${os.descricao}</td>
+                        <td>
+                            <select onchange="trocarTecnico(${os.id}, this.value)">
+                                <option value="israel_sillas" ${os.tecnico_loguim === 'israel_sillas' ? 'selected' : ''}>Israel</option>
+                                <option value="wil_sampaio" ${os.tecnico_loguim === 'wil_sampaio' ? 'selected' : ''}>Wil</option>
+                            </select>
+                        </td>
+                        <td><span class="status-badge ${os.status === 'Finalizado' ? 'finalizado' : 'pendente'}">${os.status}</span></td>
+                        <td>
+                            <button class="btn-del" onclick="deletarOS(${os.id})">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function trocarTecnico(id, novoTecnico) {
+            const { error } = await _supabase
+                .from('ordens_servico')
+                .update({ tecnico_loguim: novoTecnico })
+                .eq('id', id);
+            
+            if (!error) alert("Técnico atualizado!");
+        }
+
+        async function deletarOS(id) {
+            if(confirm("Deseja apagar essa OS?")) {
+                await _supabase.from('ordens_servico').delete().eq('id', id);
+                carregarOS();
+            }
+        }
+
+        carregarOS();
+    </script>
+</body>
+</html>

@@ -86,7 +86,7 @@
             <strong>Financeiro SHB</strong>
         </a>
 
-        <a href="03_Manutencao_OS/index.html" id="card-manutencao" class="card">
+        <a href="#" id="card-manutencao" class="card">
             <span>🛠️</span>
             <strong>Manutenção OS</strong>
         </a>
@@ -112,12 +112,17 @@
                 return;
             }
 
-            // Identifica se é Israel ou Wil pelo loguim ou pela empresa
+            // 1. Identifica o papel do usuário
             const eTecnico = ['israel_sillas', 'wil_sampaio'].includes(usuarioLogado.loguim) || usuarioLogado.empresa === 'TECNICO';
+            const cardManutencao = document.getElementById('card-manutencao');
 
             if (eTecnico) {
+                // VISÃO DO TÉCNICO
                 document.getElementById('boas-vindas').innerText = "PAINEL DO TÉCNICO: " + usuarioLogado.nome.split(' ')[0].toUpperCase();
                 
+                // Direciona técnico para a lista de tarefas dele
+                cardManutencao.href = "manutencao.html";
+
                 // ESCONDER o que técnico não vê
                 document.getElementById('card-pix').style.display = 'none';
                 document.getElementById('card-financeiro').style.display = 'none';
@@ -131,9 +136,13 @@
                     alert("Ponto iniciado para " + usuarioLogado.nome + " às " + new Date().toLocaleTimeString());
                 };
             } 
-            else if (usuarioLogado.empresa === 'SuperHost' || usuarioLogado.empresa === 'MASTER') {
+            else {
+                // VISÃO DO ADMINISTRADOR
                 document.getElementById('boas-vindas').innerText = "PORTAL ADMINISTRATIVO";
                 
+                // Direciona ADM para a tela de criar e gerenciar OS
+                cardManutencao.href = "manutencao_adm.html";
+
                 ativarCard('card-faxina', '🧹', '04_Pagamento_Faxina/index.html');
                 ativarCard('card-studio', '✨', '05_Studio_Clean/index.html');
                 ativarCard('card-newbyte', '💻', '06_NewByte/index.html');
