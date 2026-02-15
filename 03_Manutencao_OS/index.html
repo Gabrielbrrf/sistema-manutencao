@@ -3,77 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manutenção OS - Super Host</title>
+    <title>Manutenção OS - Técnico</title>
     <link rel="stylesheet" href="../style_global.css"> 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
-        /* Forçamos o display none via CSS para não ter erro de carregamento */
-        #secaoFinanceiraOS, #btnGerarOS {
-            display: none !important;
-        }
+        .container { max-width: 500px; margin: auto; padding: 15px; }
+        .card-os { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-iniciar { background: #10b981; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .secao-fechamento { display: none; margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 15px; }
+        input[type="number"] { width: 100%; padding: 10px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 6px; }
+        .btn-finalizar { background: #2563eb; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h1 style="font-size: 1.4rem; color: #1e293b; margin: 0;">Manutenção - O.S</h1>
-            <button class="badge-pix" onclick="window.location.href='../00_Portal/portal.html'" style="cursor: pointer; padding: 8px 15px; border-radius: 6px; border: 1px solid #ccc; background: white;">Voltar</button>
+            <h1 style="font-size: 1.2rem; color: #1e293b;">🛠️ Meus Chamados</h1>
+            <button onclick="window.location.reload()" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ccc; background: white;">🔄</button>
         </header>
 
-        <section class="form-grid-vertical card" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                <select id="cidadeOS" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
-                    <option value="">Cidade</option>
-                    <option value="santos">Santos</option>
-                    <option value="guaruja">Guarujá</option>
-                </select>
-                <select id="tecnicoOS" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
-                    <option value="">Carregando técnicos...</option>
-                </select>
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                <input type="text" id="enderecoOS" placeholder="Condomínio/Endereço" style="flex: 3; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
-                <input type="text" id="aptoOS" placeholder="Apto" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
-            </div>
-
-            <input type="text" id="servicoOS" placeholder="O que foi feito?" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 12px; box-sizing: border-box;">
-            
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
-                <label style="font-size: 11px; font-weight: bold; color: #64748b;">HÓSPEDE?</label>
-                <select id="hospedeStatusOS" style="flex: 1; min-width: 100px; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-                    <option value="Sim">Sim</option>
-                    <option value="Não" selected>Não</option>
-                    <option value="Permitiu Entrada">Permitiu Entrada</option>
-                </select>
-                <input type="date" id="dataOS" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-                <input type="time" id="horaEstimadaOS" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-            </div>
-
-            <div id="secaoFinanceiraOS" style="margin-top: 15px; background: #f0f7ff; padding: 15px; border-radius: 8px; border: 2px dashed #2563eb;">
-                <h3 style="font-size: 14px; margin-top: 0; color: #1e40af;">💰 Financeiro e NF</h3>
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <input type="number" id="valorMaoObra" placeholder="Mão de Obra R$" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe;">
-                    <input type="number" id="valorMateriais" placeholder="Materiais R$" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe;">
-                </div>
-                <input type="file" id="inputNF" accept="image/*" capture="camera">
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button id="btnIniciarOS" style="background: #10b981; flex: 1; color: white; padding: 15px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer;">▶️ Iniciar Serviço</button>
-                <button id="btnGerarOS" style="background: #2563eb; flex: 1; color: white; padding: 15px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer;">✅ Salvar e Finalizar</button>
-            </div>
-        </section>
-
-        <div id="listaOS" style="margin-top: 25px;">
-            <h3 style="font-size: 16px; color: #475569;">Histórico Recente</h3>
-            <div id="conteudoLista"></div>
+        <div id="lista-tarefas">
+            <p style="text-align: center; color: #64748b;">Buscando serviços designados...</p>
         </div>
     </div>
 
-    <script src="model_os.js"></script>
-    <script src="view_os.js"></script>
-    <script src="controller_os.js"></script>
+    <script>
+        const SUPABASE_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function carregarServicos() {
+            const container = document.getElementById('lista-tarefas');
+            
+            // Puxa apenas o que a Gabs abriu e que ainda não está concluído
+            const { data, error } = await _supabase
+                .from('ordens_servico')
+                .select('*')
+                .eq('status', 'Pendente')
+                .order('id', { ascending: false });
+
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align: center;">Tudo em dia! Nenhuma OS pendente. ✅</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            data.forEach(os => {
+                container.innerHTML += `
+                    <div class="card-os" id="card-${os.id}">
+                        <h3 style="margin: 0 0 5px 0; color: #1e293b;">📍 ${os.cliente}</h3>
+                        <p style="margin: 0; color: #475569; font-size: 14px;">📝 ${os.descricao_servico}</p>
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+                        
+                        <button class="btn-iniciar" id="btn-ini-${os.id}" onclick="iniciar(${os.id})">INICIAR SERVIÇO</button>
+                        
+                        <div id="fechamento-${os.id}" class="secao-fechamento">
+                            <input type="number" id="mao-obra-${os.id}" placeholder="Valor Mão de Obra R$">
+                            <input type="number" id="material-${os.id}" placeholder="Materiais R$">
+                            <label style="font-size: 12px; font-weight: bold;">📸 Foto da Nota Fiscal/Recibo:</label>
+                            <input type="file" id="foto-${os.id}" accept="image/*" capture="camera" style="margin-bottom: 10px; width: 100%;">
+                            <button class="btn-finalizar" onclick="finalizar(${os.id})">SALVAR E CONCLUIR</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function iniciar(id) {
+            document.getElementById(`btn-ini-${id}`).style.display = 'none';
+            document.getElementById(`fechamento-${id}`).style.display = 'block';
+        }
+
+        async function finalizar(id) {
+            const mo = document.getElementById(`mao-obra-${id}`).value;
+            const mat = document.getElementById(`material-${id}`).value;
+            const fotoInput = document.getElementById(`foto-${id}`);
+
+            if (!mo) { alert("Informe o valor da mão de obra!"); return; }
+
+            let base64 = "";
+            if (fotoInput.files.length > 0) {
+                const reader = new FileReader();
+                base64 = await new Promise(res => {
+                    reader.readAsDataURL(fotoInput.files[0]);
+                    reader.onload = () => res(reader.result);
+                });
+            }
+
+            const { error } = await _supabase
+                .from('ordens_servico')
+                .update({
+                    status: 'Concluido',
+                    valor_mao_de_obra: parseFloat(mo),
+                    valor_gasto: parseFloat(mat || 0),
+                    foto_nf: base64,
+                    hora_conclusao: new Date().toISOString()
+                })
+                .eq('id', id);
+
+            if (!error) {
+                alert("✅ OS Concluída com sucesso!");
+                carregarServicos();
+            }
+        }
+
+        carregarServicos();
+    </script>
 </body>
 </html>
