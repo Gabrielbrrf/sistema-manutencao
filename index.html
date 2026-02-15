@@ -63,7 +63,9 @@
                 }));
 
                 // Entra na pasta do portal
-                window.location.href = '00_Portal/portal.html';
+                // Dentro da função tentarLogin(), troque o redirecionamento por este:
+// Ele força o caminho exato da pasta e do arquivo
+window.location.href = './00_Portal/portal.html';
 
             } catch (err) {
                 console.error("Erro:", err);

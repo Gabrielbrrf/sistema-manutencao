@@ -31,40 +31,54 @@
     <a href="../index.html" class="logout-link" onclick="localStorage.removeItem('usuarioLogado')">Sair do Sistema</a>
 
     <script>
-    window.onload = function() {
-        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+window.onload = function() {
+    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
 
-        if (!usuarioLogado) {
-            window.location.href = "../index.html"; 
-            return;
-        }
-
-        const nivel = usuarioLogado.empresa.toUpperCase(); 
-        const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
-        document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
-
-        const removerCard = (id) => { 
-            const el = document.getElementById(id);
-            if(el) el.remove(); 
-        };
-
-        if (nivel === 'MANUTENCAO' || nivel === 'TECNICO') {
-            removerCard('card-pix');
-            removerCard('card-financeiro');
-            removerCard('card-faxina');
-            removerCard('card-relatorio');
-            document.getElementById('card-manutencao').href = "../03_Manutencao_OS/index.html";
-            document.getElementById('card-ponto').href = "../06_Ponto_relatorio/meu_ponto.html";
-        } 
-        else if (nivel === 'OPERACIONAL') {
-            removerCard('card-pix');
-            removerCard('card-financeiro');
-            removerCard('card-manutencao');
-            removerCard('card-faxina');
-            removerCard('card-relatorio');
-            document.getElementById('card-ponto').href = "../06_Ponto_relatorio/ponto_faxina.html";
-        }
+    if (!usuarioLogado) {
+        // Se não achar o login, ele volta para a raiz
+        window.location.href = '../index.html'; 
+        return;
     }
-    </script>
+
+    const nivel = usuarioLogado.empresa.toUpperCase(); 
+    const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
+    document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
+
+    // Função para configurar os links garantindo o caminho correto saindo da pasta 00_Portal
+    const configurarLink = (id, pasta, arquivo = "index.html") => {
+        const el = document.getElementById(id);
+        // O '../' sai da 00_Portal e entra na pasta alvo
+        if(el) el.href = `../${pasta}/${arquivo}`;
+    };
+
+    const removerCard = (id) => { 
+        const el = document.getElementById(id);
+        if(el) el.remove(); 
+    };
+
+    // Configuração manual para bater com os nomes das suas pastas (CUIDADO COM MAIÚSCULAS)
+    configurarLink('card-pix', '01_Gestao_Pix');
+    configurarLink('card-financeiro', '02_Financeiro_NF');
+    configurarLink('card-manutencao', '03_Manutencao_OS');
+    configurarLink('card-faxina', '04_Pagamento_Faxina');
+    configurarLink('card-relatorio', '05_Relatorio_Faxina', 'relatorio.html');
+    configurarLink('card-ponto', '06_Ponto_relatorio', 'meu_ponto.html');
+
+    if (nivel === 'MANUTENCAO' || nivel === 'TECNICO') {
+        removerCard('card-pix');
+        removerCard('card-financeiro');
+        removerCard('card-faxina');
+        removerCard('card-relatorio');
+    } 
+    else if (nivel === 'OPERACIONAL') {
+        removerCard('card-pix');
+        removerCard('card-financeiro');
+        removerCard('card-manutencao');
+        removerCard('card-faxina');
+        removerCard('card-relatorio');
+        configurarLink('card-ponto', '06_Ponto_relatorio', 'ponto_faxina.html');
+    }
+}
+</script>
 </body>
 </html>
