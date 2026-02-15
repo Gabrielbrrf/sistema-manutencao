@@ -32,51 +32,49 @@
     </div>
 
     <script>
-        // Configuração direta com as suas chaves
         const SUPABASE_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
         
-        // Inicializa o cliente dentro do script de login
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function tentarLogin() {
-    const userField = document.getElementById('user').value.trim();
-    const passField = document.getElementById('pass').value.trim();
+            const userField = document.getElementById('user').value.trim();
+            const passField = document.getElementById('pass').value.trim();
 
-    if (!userField || !passField) {
-        alert("Preencha todos os campos!");
-        return;
-    }
+            if (!userField || !passField) {
+                alert("Preencha todos os campos!");
+                return;
+            }
 
-    try {
-        // O segredo está aqui: batendo exatamente com a coluna 'loguim' da sua imagem
-        const { data, error } = await _supabase
-            .from('colaboradores')
-            .select('*')
-            .eq('loguim', userField) 
-            .eq('senha', passField)
-            .eq('ativo', true)
-            .single();
+            try {
+                const { data, error } = await _supabase
+                    .from('colaboradores')
+                    .select('*')
+                    .eq('loguim', userField) 
+                    .eq('senha', passField)
+                    .eq('ativo', true)
+                    .single();
 
-        if (error) {
-            console.log("Erro do Supabase:", error.message);
-            alert("Usuário ou senha incorretos!");
-            return;
+                if (error) {
+                    console.log("Erro do Supabase:", error.message);
+                    alert("Usuário ou senha incorretos!");
+                    return;
+                }
+
+                if (data) {
+                    // MUDANÇA AQUI: Agora ele pega a empresa que está no banco (MASTER ou TECNICO)
+                    localStorage.setItem('usuarioLogado', JSON.stringify({
+                        nome: data.nome,
+                        loguim: data.loguim,
+                        empresa: data.empresa // Antes estava escrito 'TECNICO' fixo
+                    }));
+                    window.location.href = 'portal.html';
+                }
+            } catch (err) {
+                console.error("Erro inesperado:", err);
+                alert("Erro de conexão. Tente novamente.");
+            }
         }
-
-        if (data) {
-            localStorage.setItem('usuarioLogado', JSON.stringify({
-                nome: data.nome,
-                loguim: data.loguim,
-                empresa: 'TECNICO'
-            }));
-            window.location.href = 'portal.html';
-        }
-    } catch (err) {
-        console.error("Erro inesperado:", err);
-        alert("Erro de conexão. Tente novamente.");
-    }
-}
     </script>
 </body>
 </html>
