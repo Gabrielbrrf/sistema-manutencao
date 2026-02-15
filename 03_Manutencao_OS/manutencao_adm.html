@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADM - Gestão de Manutenção</title>
+    <title>MASTER - Gestão de Manutenção</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; margin: 0; }
@@ -15,25 +15,23 @@
         .form-group { display: flex; gap: 10px; flex-wrap: wrap; }
         input, select { padding: 12px; border: 1px solid #ddd; border-radius: 6px; flex: 1; min-width: 150px; font-size: 14px; }
         
-        .btn-criar { background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-criar:hover { background: #219150; }
+        .btn-criar { background: #2563eb; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-criar:hover { background: #1d4ed8; }
         .btn-voltar { text-decoration: none; color: #666; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; }
-        .btn-voltar:hover { color: #d4af37; }
 
         table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; font-size: 14px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        th { background: #34495e; color: white; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+        th { background: #1e293b; color: white; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
         
         .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        .pendente { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-        .finalizado { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .pendente { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; } /* Amarelo: ainda não terminaram */
+        .finalizado { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; } /* Verde: concluído pelos técnicos */
         
-        .btn-del { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .btn-del { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
         .btn-del:hover { background: #ef4444; color: white; }
 
         @media (max-width: 768px) {
             .form-group { flex-direction: column; }
-            th:nth-child(2), td:nth-child(2) { display: none; } /* Esconde descrição no mobile p/ caber */
         }
     </style>
 </head>
@@ -41,38 +39,38 @@
 
 <div class="container">
     <div class="header-adm">
-        <a href="../00_Portal/portal.html" class="btn-voltar">⬅️ Voltar ao Painel</a>
-        <span style="font-weight: bold; color: #34495e;">PAINEL ADMINISTRATIVO</span>
+        <a href="../00_Portal/portal.html" class="btn-voltar">⬅️ Voltar ao Portal Master</a>
+        <span style="font-weight: bold; color: #34495e;">CONTROLE DE ORDENS DE SERVIÇO</span>
     </div>
 
     <div class="card">
-    <h2>➕ Lançar Nova Ordem de Serviço</h2>
+    <h2>🚀 Lançar Serviço para o Time</h2>
     <div class="form-group">
-        <input type="text" id="cliente" placeholder="Local (ex: Cond. Verano)">
-        <input type="text" id="descricao" placeholder="O que precisa ser feito?">
+        <input type="text" id="cliente" placeholder="Condomínio / Local">
+        <input type="text" id="descricao" placeholder="O que deve ser feito? (Ex: Consertar infiltração)">
         <select id="tecnico_select">
-            <option value="">Enviar para...</option>
+            <option value="">Escolha o Técnico...</option>
             <option value="Israel Sillas">Israel Sillas</option>
             <option value="Wil Sampaio">Wil Sampaio</option>
         </select>
-        <button class="btn-criar" onclick="criarOS()">ENVIAR SERVIÇO</button>
+        <button class="btn-criar" onclick="criarOS()">ENVIAR CHAMADO</button>
     </div>
 </div>
 
     <div class="card">
-        <h2>📋 Monitoramento de Serviços</h2>
+        <h2>📋 Monitoramento em Tempo Real</h2>
         <table>
             <thead>
                 <tr>
                     <th>Local</th>
-                    <th>Descrição</th>
-                    <th>Técnico</th>
+                    <th>O que foi pedido</th>
+                    <th>Responsável</th>
                     <th>Status</th>
                     <th>Ações</th>
                 </tr>
             </thead>
             <tbody id="lista-geral-os">
-                <tr><td colspan="5">Buscando ordens no sistema...</td></tr>
+                <tr><td colspan="5">Sincronizando com o banco de dados...</td></tr>
             </tbody>
         </table>
     </div>
@@ -89,7 +87,7 @@
         const tecnico = document.getElementById('tecnico_select').value;
 
         if (!cliente || !descricao || !tecnico) {
-            alert("Atenção: Preencha Local, Descrição e Técnico!");
+            alert("Atenção Gabs: Preencha Local, Descrição e Técnico!");
             return;
         }
 
@@ -97,18 +95,19 @@
             .from('ordens_servico')
             .insert([{ 
                 cliente: cliente, 
-                descricao_servico: descricao, // Ajustado para bater com seu banco se necessário
+                descricao_servico: descricao, 
                 tecnico: tecnico, 
-                status: 'Pendente' 
+                status: 'Pendente',
+                data_execucao: new Date().toISOString().split('T')[0]
             }]);
 
         if (!error) {
-            alert("✅ OS Lançada com sucesso!");
+            alert("✅ OS enviada para o celular do técnico!");
             document.getElementById('cliente').value = '';
             document.getElementById('descricao').value = '';
             carregarOS();
         } else {
-            alert("Erro ao salvar: " + error.message);
+            alert("Erro ao enviar OS: " + error.message);
         }
     }
 
@@ -118,27 +117,22 @@
             .select('*')
             .order('id', { ascending: false });
 
-        if (error) {
-            console.error(error);
-            return;
-        }
+        if (error) return;
 
         const tabela = document.getElementById('lista-geral-os');
-        tabela.innerHTML = data.length ? '' : '<tr><td colspan="5">Nenhum serviço encontrado.</td></tr>';
+        tabela.innerHTML = data.length ? '' : '<tr><td colspan="5">Nenhuma ordem ativa.</td></tr>';
 
         data.forEach(os => {
-            const badgeClass = os.status === 'Finalizado' || os.status === 'Concluido' ? 'finalizado' : 'pendente';
+            // Se for Finalizado ou Concluido, fica verde. Senão, amarelo (pendente).
+            const badgeClass = (os.status === 'Finalizado' || os.status === 'Concluido') ? 'finalizado' : 'pendente';
+            const statusTexto = (os.status === 'Finalizado' || os.status === 'Concluido') ? 'CONCLUÍDO' : 'EM ABERTO';
+
             tabela.innerHTML += `
                 <tr>
                     <td><strong>${os.cliente}</strong></td>
-                    <td style="color: #666; font-size: 13px;">${os.descricao_servico || os.descricao || ''}</td>
-                    <td>
-                        <select onchange="trocarTecnico(${os.id}, this.value)" style="padding: 5px; font-size: 12px; min-width: auto;">
-                            <option value="Israel Sillas" ${os.tecnico === 'Israel Sillas' ? 'selected' : ''}>Israel</option>
-                            <option value="Wil Sampaio" ${os.tecnico === 'Wil Sampaio' ? 'selected' : ''}>Wil</option>
-                        </select>
-                    </td>
-                    <td><span class="status-badge ${badgeClass}">${os.status}</span></td>
+                    <td style="color: #666;">${os.descricao_servico || ''}</td>
+                    <td>${os.tecnico}</td>
+                    <td><span class="status-badge ${badgeClass}">${statusTexto}</span></td>
                     <td>
                         <button class="btn-del" onclick="deletarOS(${os.id})">🗑️</button>
                     </td>
@@ -147,30 +141,16 @@
         });
     }
 
-    async function trocarTecnico(id, novoTecnico) {
-        const { error } = await _supabase
-            .from('ordens_servico')
-            .update({ tecnico: novoTecnico })
-            .eq('id', id);
-        
-        if (!error) {
-            console.log("Técnico atualizado");
-        } else {
-            alert("Erro ao mudar técnico: " + error.message);
-        }
-    }
-
     async function deletarOS(id) {
-        if(confirm("Deseja realmente excluir este registro?")) {
+        if(confirm("Deseja excluir essa ordem de serviço?")) {
             const { error } = await _supabase.from('ordens_servico').delete().eq('id', id);
             if (!error) carregarOS();
         }
     }
 
-    // Inicia a lista ao carregar
+    // Carrega os dados assim que você abre a página
     carregarOS();
 </script>
 
 </body>
 </html>
-
