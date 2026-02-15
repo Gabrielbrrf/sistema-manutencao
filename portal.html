@@ -6,12 +6,13 @@
     <title>Painel PROGGABS - Super Host Brasil</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        h1 { margin-bottom: 40px; letter-spacing: 2px; color: #d4af37; text-align: center; } 
+        h1 { margin-bottom: 40px; letter-spacing: 2px; color: #d4af37; text-align: center; text-transform: uppercase; } 
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; width: 90%; max-width: 1000px; padding: 20px; }
         .card { background: #1e1e1e; padding: 40px 20px; border-radius: 15px; text-align: center; border: 1px solid #333; transition: all 0.3s ease; cursor: pointer; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
         .card:hover { border-color: #d4af37; transform: translateY(-5px); background: #252525; box-shadow: 0 10px 20px rgba(212, 175, 55, 0.2); }
         .card span { font-size: 35px; }
-        .logout-link { margin-top: 30px; color: #666; text-decoration: none; font-size: 14px; }
+        .logout-link { margin-top: 30px; color: #666; text-decoration: none; font-size: 14px; transition: 0.3s; }
+        .logout-link:hover { color: #d4af37; }
         @media (max-width: 768px) { .grid { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
@@ -20,65 +21,68 @@
     <h1 id="boas-vindas">CARREGANDO...</h1>
     
     <div class="grid" id="grid-sistemas">
-        <a href="../01_Gestao_Pix/index.html" id="card-pix" class="card"><span>💰</span><strong>Contatos PIX</strong></a>
-        <a href="../04_Pagamento_Faxina/index.html" id="card-faxina" class="card"><span>🧹</span><strong>Pagamento Faxina</strong></a>
-        <a href="../03_Manutencao_OS/index.html" id="card-manutencao" class="card"><span>🛠️</span><strong>Manutenção OS</strong></a>
-        <a href="../02_Financeiro_NF/index.html" id="card-financeiro" class="card"><span>📑</span><strong>Arquivo de Notas</strong></a>
-        <a href="../05_Relatorio_Faxina/relatorio.html" id="card-relatorio" class="card"><span>📊</span><strong>Relatório Geral</strong></a>
-        <a href="../06_Ponto_relatorio/meu_ponto.html" id="card-ponto" class="card"><span>⏱️</span><strong>Meu Ponto</strong></a>
+        <a id="card-pix" class="card"><span>💰</span><strong>Contatos PIX</strong></a>
+        <a id="card-faxina" class="card"><span>🧹</span><strong>Pagamento Faxina</strong></a>
+        <a id="card-manutencao" class="card"><span>🛠️</span><strong>Manutenção OS</strong></a>
+        <a id="card-financeiro" class="card"><span>📑</span><strong>Arquivo de Notas</strong></a>
+        <a id="card-relatorio" class="card"><span>📊</span><strong>Relatório Geral</strong></a>
+        <a id="card-ponto" class="card"><span>⏱️</span><strong>Meu Ponto</strong></a>
     </div>
 
     <a href="../index.html" class="logout-link" onclick="localStorage.removeItem('usuarioLogado')">Sair do Sistema</a>
 
     <script>
-window.onload = function() {
-    const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+    window.onload = function() {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
 
-    if (!usuarioLogado) {
-        // Se não achar o login, ele volta para a raiz
-        window.location.href = '../index.html'; 
-        return;
+        // Proteção: Se não houver sessão, volta para o login
+        if (!usuarioLogado) {
+            window.location.href = '../index.html'; 
+            return;
+        }
+
+        const nivel = usuarioLogado.empresa.toUpperCase(); 
+        const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
+        document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
+
+        // Função para configurar os caminhos saindo da pasta 00_Portal para as vizinhas
+        const configurarLink = (id, pasta, arquivo = "index.html") => {
+            const el = document.getElementById(id);
+            if(el) el.href = `../${pasta}/${arquivo}`;
+        };
+
+        const removerCard = (id) => { 
+            const el = document.getElementById(id);
+            if(el) el.remove(); 
+        };
+
+        // --- CONFIGURAÇÃO DOS CAMINHOS ---
+        // Certifique-se que os nomes das pastas no seu computador/Vercel são exatamente esses:
+        configurarLink('card-pix', '01_Gestao_Pix');
+        configurarLink('card-financeiro', '02_Financeiro_NF');
+        configurarLink('card-manutencao', '03_Manutencao_OS');
+        configurarLink('card-faxina', '04_Pagamento_Faxina');
+        configurarLink('card-relatorio', '05_Relatorio_Faxina', 'relatorio.html');
+        configurarLink('card-ponto', '06_Ponto_relatorio', 'meu_ponto.html');
+
+        // --- REGRAS DE ACESSO POR NÍVEL ---
+        if (nivel === 'MANUTENCAO' || nivel === 'TECNICO') {
+            removerCard('card-pix');
+            removerCard('card-financeiro');
+            removerCard('card-faxina');
+            removerCard('card-relatorio');
+        } 
+        else if (nivel === 'OPERACIONAL') {
+            removerCard('card-pix');
+            removerCard('card-financeiro');
+            removerCard('card-manutencao');
+            removerCard('card-faxina');
+            removerCard('card-relatorio');
+            // Operacional usa um arquivo de ponto diferente
+            configurarLink('card-ponto', '06_Ponto_relatorio', 'ponto_faxina.html');
+        }
+        // MASTER e ADM visualizam todos os cards configurados acima
     }
-
-    const nivel = usuarioLogado.empresa.toUpperCase(); 
-    const nomeUser = usuarioLogado.nome.split(' ')[0].toUpperCase();
-    document.getElementById('boas-vindas').innerText = `SISTEMA ${nivel}: ${nomeUser}`;
-
-    // Função para configurar os links garantindo o caminho correto saindo da pasta 00_Portal
-    const configurarLink = (id, pasta, arquivo = "index.html") => {
-        const el = document.getElementById(id);
-        // O '../' sai da 00_Portal e entra na pasta alvo
-        if(el) el.href = `../${pasta}/${arquivo}`;
-    };
-
-    const removerCard = (id) => { 
-        const el = document.getElementById(id);
-        if(el) el.remove(); 
-    };
-
-    // Configuração manual para bater com os nomes das suas pastas (CUIDADO COM MAIÚSCULAS)
-    configurarLink('card-pix', '01_Gestao_Pix');
-    configurarLink('card-financeiro', '02_Financeiro_NF');
-    configurarLink('card-manutencao', '03_Manutencao_OS');
-    configurarLink('card-faxina', '04_Pagamento_Faxina');
-    configurarLink('card-relatorio', '05_Relatorio_Faxina', 'relatorio.html');
-    configurarLink('card-ponto', '06_Ponto_relatorio', 'meu_ponto.html');
-
-    if (nivel === 'MANUTENCAO' || nivel === 'TECNICO') {
-        removerCard('card-pix');
-        removerCard('card-financeiro');
-        removerCard('card-faxina');
-        removerCard('card-relatorio');
-    } 
-    else if (nivel === 'OPERACIONAL') {
-        removerCard('card-pix');
-        removerCard('card-financeiro');
-        removerCard('card-manutencao');
-        removerCard('card-faxina');
-        removerCard('card-relatorio');
-        configurarLink('card-ponto', '06_Ponto_relatorio', 'ponto_faxina.html');
-    }
-}
-</script>
+    </script>
 </body>
 </html>

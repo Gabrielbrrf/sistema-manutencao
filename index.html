@@ -62,13 +62,11 @@
                     empresa: data.empresa 
                 }));
 
-                // Entra na pasta do portal
-                // Dentro da função tentarLogin(), troque o redirecionamento por este:
-// Ele força o caminho exato da pasta e do arquivo
-window.location.href = './00_Portal/portal.html';
+                // Redirecionamento limpo
+                window.location.href = './00_Portal/portal.html';
 
             } catch (err) {
-                console.error("Erro:", err);
+                console.error("Erro no login:", err);
                 alert("Erro ao conectar com o servidor.");
             }
         }
