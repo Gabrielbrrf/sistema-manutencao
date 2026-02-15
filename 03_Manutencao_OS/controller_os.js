@@ -4,15 +4,15 @@ let horaInicioReal = null;
 const ManutencaoController = {
     async init() {
         try {
-            // Carrega os técnicos (Israel/Will) do Model
+            // Carrega os técnicos (Israel/Will) do Model (tabela colaboradores)
             const tecnicos = await ManutencaoModel.buscarTecnicos();
             ManutencaoView.renderizarTecnicos(tecnicos);
 
-            // Busca o histórico de ordens
+            // Busca o histórico de ordens para mostrar na lista abaixo do form
             const { data: ordens } = await ManutencaoModel.buscarTodasOS();
             ManutencaoView.renderizarLista(ordens || []);
 
-            // Preenche data e hora atual nos campos automáticos
+            // Preenche data e hora atual nos campos automáticos para facilitar pro técnico
             const agora = new Date();
             const campoData = document.getElementById('dataOS');
             const campoHora = document.getElementById('horaEstimadaOS');
@@ -37,16 +37,15 @@ const ManutencaoController = {
     }
 };
 
-// EVENTO: BOTÃO INICIAR SERVIÇO
+// EVENTO: BOTÃO INICIAR SERVIÇO (Libera os campos financeiros)
 document.getElementById('btnIniciarOS')?.addEventListener('click', () => {
     horaInicioReal = new Date().toISOString(); 
     
-    // Feedback visual e troca de seções
     const btnIniciar = document.getElementById('btnIniciarOS');
     const secaoFin = document.getElementById('secaoFinanceiraOS');
     const btnGerar = document.getElementById('btnGerarOS');
 
-    // Usamos setProperty para ignorar o !important do CSS do index
+    // Remove o botão Iniciar e mostra a parte de Financeiro/NF e Finalizar
     if (btnIniciar) btnIniciar.style.setProperty('display', 'none', 'important');
     if (secaoFin) secaoFin.style.setProperty('display', 'block', 'important');
     if (btnGerar) btnGerar.style.setProperty('display', 'block', 'important');
@@ -54,13 +53,13 @@ document.getElementById('btnIniciarOS')?.addEventListener('click', () => {
     console.log("OS Iniciada em: " + horaInicioReal);
 });
 
-// EVENTO: BOTÃO SALVAR E FINALIZAR (O FECHAMENTO)
+// EVENTO: BOTÃO SALVAR E FINALIZAR (Envia tudo para o banco)
 document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
     const btn = document.getElementById('btnGerarOS');
     const tecnicoSelect = document.getElementById('tecnicoOS');
 
     if (!tecnicoSelect.value) {
-        alert("Por favor, selecione o Técnico responsável!");
+        alert("Por favor, selecione o seu nome (Técnico)!");
         return;
     }
 
@@ -72,6 +71,7 @@ document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
         let base64NF = "";
         const inputNF = document.getElementById('inputNF'); 
         
+        // Converte a foto tirada em Base64 para salvar no banco
         if (inputNF && inputNF.files && inputNF.files.length > 0) {
             base64NF = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -97,7 +97,7 @@ document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
             valor_mao_de_obra: parseFloat(document.getElementById('valorMaoObra')?.value) || 0,
             valor_gasto: parseFloat(document.getElementById('valorMateriais')?.value) || 0,
             foto_nf: base64NF, 
-            status: 'Concluido'
+            status: 'Concluido' // Isso faz a OS ficar VERDE na sua tela ADM
         };
 
         const { error } = await ManutencaoModel.salvarNoBanco(dados);
@@ -118,4 +118,5 @@ document.getElementById('btnGerarOS')?.addEventListener('click', async () => {
     }
 });
 
+// Inicialização automática
 window.addEventListener('load', () => ManutencaoController.init());
