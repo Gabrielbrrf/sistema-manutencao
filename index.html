@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Super Host Brasil</title>
-    
     <link rel="stylesheet" href="./loguim.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -31,8 +29,6 @@
     <script>
         const SUPABASE_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
-        
-        // Inicialização garantida
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         localStorage.removeItem('usuarioLogado');
@@ -66,12 +62,11 @@
                     empresa: data.empresa 
                 }));
 
-                // O PULO DO GATO: 
-                // Usamos ./ para dizer "procure a pasta 00_Portal a partir de onde estou agora"
-                window.location.href = './00_Portal/portal.html';
+                // Entra na pasta do portal
+                window.location.href = '00_Portal/portal.html';
 
             } catch (err) {
-                console.error("Erro no login:", err);
+                console.error("Erro:", err);
                 alert("Erro ao conectar com o servidor.");
             }
         }
