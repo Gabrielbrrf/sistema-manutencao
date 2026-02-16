@@ -77,8 +77,8 @@
                 .update({ 
                     status: 'Concluido', 
                     hora_conclusao: new Date().toISOString(),
-                    valor_servico: v,  // VERIFIQUE SE ESSE NOME TÁ IGUAL NO SUPABASE
-                    numero_nf: n       // VERIFIQUE SE ESSE NOME TÁ IGUAL NO SUPABASE
+                    valor_mao_de_obra: v,  // VERIFIQUE SE ESSE NOME TÁ IGUAL NO SUPABASE
+                    url_nota_fiscal: n       // VERIFIQUE SE ESSE NOME TÁ IGUAL NO SUPABASE
                 })
                 .eq('id', id);
 
