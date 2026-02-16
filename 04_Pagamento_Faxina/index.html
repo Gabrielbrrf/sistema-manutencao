@@ -23,7 +23,7 @@
         // Se não for MASTER, expulsa para o portal
         if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
             alert("Área Restrita!");
-            window.location.href = "../portal.html";
+            window.location.href = "../00_Portal/portal.html";
         }
     })();
 </script>
@@ -84,4 +84,5 @@
     <script src="view_faxina.js"></script>
     <script src="controller_faxina.js"></script>
 </body>
+
 </html>
