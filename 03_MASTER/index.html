@@ -86,9 +86,9 @@
         // USANDO OS NOMES EXATOS DAS COLUNAS DO SEU SUPABASE
         const { error } = await sb.from('ordens_servico').insert([{
             apto: apto,
-            endereco_con: endereco, 
-            descricao_serv: servico,
-            hospede_no_a: hospede,
+            endereco_condominio: endereco, 
+            descricao_servico: servico,
+            hospede_no_apto: hospede,
             senha_porta: (tipoAcesso === 'Senha') ? senha : 'Chave',
             tecnico: tecnico,
             status: 'Aberto'
