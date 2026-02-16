@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -14,25 +13,48 @@
         table { width: 100%; border-collapse: collapse; background: white; }
         th, td { padding: 10px; border: 1px solid #eee; text-align: left; }
         th { background: #1e293b; color: white; }
+        
+        /* Cores dos Status */
+        .status-pendente { color: #d97706; font-weight: bold; }
+        .status-andamento { color: #2563eb; font-weight: bold; animation: pulse 2s infinite; }
+        .status-concluido { color: #059669; font-weight: bold; }
+        
+        .badge-hospede { background: #fee2e2; color: #991b1b; padding: 2px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; }
         .btn-nf { background: #10b981; font-size: 10px; padding: 5px; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>🚀 Novo Chamado</h2>
-        <input type="text" id="c" placeholder="Local">
-        <input type="text" id="d" placeholder="Serviço">
+        <input type="text" id="c" placeholder="Local (Ex: Apto 101)">
+        <input type="text" id="d" placeholder="O que precisa ser feito?">
+        
+        <select id="h">
+            <option value="NÃO">Hóspede no local? NÃO</option>
+            <option value="SIM">Hóspede no local? SIM</option>
+        </select>
+
         <select id="t">
             <option value="Israel Sillas">Israel Sillas</option>
             <option value="Wil Sampaio">Wil Sampaio</option>
         </select>
-        <button onclick="salvar()">LANÇAR</button>
+        <button onclick="salvar()">LANÇAR SERVIÇO</button>
     </div>
 
     <div class="card">
-        <h2>📋 Monitoramento</h2>
+        <h2>📋 Monitoramento de Obras</h2>
         <table>
-            <thead><tr><th>Local</th><th>Técnico</th><th>Financeiro</th><th>Status</th><th>Ação</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Local / Hóspede</th>
+                    <th>Serviço</th>
+                    <th>Técnico</th>
+                    <th>Financeiro</th>
+                    <th>Status</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
             <tbody id="lista"></tbody>
         </table>
     </div>
@@ -41,11 +63,20 @@
     const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
     async function salvar() {
+        const local = document.getElementById('c').value;
+        const desc = document.getElementById('d').value;
+        const hosp = document.getElementById('h').value;
+        const tec = document.getElementById('t').value;
+
+        if(!local || !desc) { alert("Preencha Local e Serviço!"); return; }
+
         await sb.from('ordens_servico').insert([{ 
-            cliente: document.getElementById('c').value, 
-            descricao_servico: document.getElementById('d').value, 
-            tecnico: document.getElementById('t').value, 
-            status: 'Pendente' 
+            cliente: local, 
+            descricao_servico: desc, 
+            tecnico: tec, 
+            status: 'Pendente',
+            // Usamos uma coluna extra ou concatenamos na descrição para o técnico ver
+            observacoes: hosp // Salvando a info do hóspede aqui
         }]);
         location.reload();
     }
@@ -54,14 +85,43 @@
         const { data } = await sb.from('ordens_servico').select('*').order('id', {ascending: false});
         const l = document.getElementById('lista');
         l.innerHTML = '';
+
         data.forEach(o => {
-            const fin = o.status === 'Concluido' ? `R$ ${o.valor_mao_de_obra || 0}` : '---';
-            const nf = o.foto_nf ? `<button class="btn-nf" onclick="window.open().document.write('<img src=${o.foto_nf} width=100%>')">VER NF</button>` : '';
-            l.innerHTML += `<tr><td>${o.cliente}</td><td>${o.tecnico}</td><td>${fin} ${nf}</td><td>${o.status}</td><td><button onclick="del(${o.id})">🗑️</button></td></tr>`;
+            const fin = (o.status === 'Concluido' || o.status === 'Finalizado') 
+                ? `R$ ${o.valor_mao_de_obra || 0} + R$ ${o.valor_gasto || 0}` 
+                : '---';
+            
+            const nf = o.foto_nf ? `<button class="btn-nf" onclick="verNF('${o.foto_nf}')">VER NF</button>` : '';
+            
+            // Lógica de cores do Status
+            let classeStatus = 'status-pendente';
+            if(o.status === 'Em Andamento') classeStatus = 'status-andamento';
+            if(o.status === 'Concluido' || o.status === 'Finalizado') classeStatus = 'status-concluido';
+
+            const tagHospede = o.observacoes === 'SIM' ? '<br><span class="badge-hospede">⚠️ HÓSPEDE NO LOCAL</span>' : '';
+
+            l.innerHTML += `
+                <tr>
+                    <td><strong>${o.cliente}</strong>${tagHospede}</td>
+                    <td>${o.descricao_servico}</td>
+                    <td>${o.tecnico}</td>
+                    <td>${fin} ${nf}</td>
+                    <td><span class="${classeStatus}">${o.status.toUpperCase()}</span></td>
+                    <td><button onclick="del(${o.id})">🗑️</button></td>
+                </tr>`;
         });
     }
-    async function del(id) { if(confirm('Excluir?')) { await sb.from('ordens_servico').delete().eq('id', id); carregar(); } }
+
+    function verNF(base64) {
+        const win = window.open("");
+        win.document.write(`<img src="${base64}" style="width:100%">`);
+    }
+
+    async function del(id) { if(confirm('Excluir permanentemente?')) { await sb.from('ordens_servico').delete().eq('id', id); carregar(); } }
+    
     carregar();
+    // Atualiza a cada 30 segundos sozinho para você ver o "Em Andamento"
+    setInterval(carregar, 30000);
 </script>
 </body>
 </html>
