@@ -24,7 +24,6 @@
         const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
         async function carregar() {
-            // Puxa serviços que não estão concluídos
             const { data, error } = await sb.from('ordens_servico')
                 .select('*')
                 .neq('status', 'Concluido')
@@ -45,7 +44,7 @@
             }
 
             data.forEach(os => {
-                const tagHospede = os.hospede_no_a === 'Sim' ? '<span class="badge-hospede">⚠️ COM HÓSPEDE</span>' : '';
+                const tagHospede = os.hospede_no_apto === 'Sim' ? '<span class="badge-hospede">⚠️ COM HÓSPEDE</span>' : '';
                 
                 container.innerHTML += `
                     <div class="card-os">
@@ -53,8 +52,8 @@
                             <h3>📍 Apto: ${os.apto || '---'}</h3>
                             ${tagHospede}
                         </div>
-                        <div class="info-linha">🏢 <b>Edifício:</b> ${os.endereco_con || 'Não informado'}</div>
-                        <div class="info-linha">📝 <b>Serviço:</b> ${os.descricao_serv || 'Sem descrição'}</div>
+                        <div class="info-linha">🏢 <b>Edifício:</b> ${os.endereco_condominio || 'Não informado'}</div>
+                        <div class="info-linha">📝 <b>Serviço:</b> ${os.descricao_servico || 'Sem descrição'}</div>
                         
                         <div class="info-acesso">
                             <b>🔑 FORMA DE ACESSO:</b><br>
@@ -79,7 +78,6 @@
             }
         }
 
-        // Carrega ao abrir e atualiza a cada 1 minuto
         carregar();
         setInterval(carregar, 60000);
     </script>
