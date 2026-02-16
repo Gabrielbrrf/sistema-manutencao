@@ -30,7 +30,7 @@
                 .order('id', { ascending: false });
 
             if (error) {
-                console.error(error);
+                console.error("Erro ao carregar:", error);
                 document.getElementById('lista-chamados').innerHTML = "Erro ao carregar dados.";
                 return;
             }
@@ -44,7 +44,9 @@
             }
 
             data.forEach(os => {
-                const tagHospede = os.hospede_no_apto === 'Sim' ? '<span class="badge-hospede">⚠️ COM HÓSPEDE</span>' : '';
+                // Verificando os dois nomes possíveis de coluna para hóspede
+                const hospede = os.hospede_no_apto || os.hospede_no_a;
+                const tagHospede = hospede === 'Sim' ? '<span class="badge-hospede">⚠️ COM HÓSPEDE</span>' : '';
                 
                 container.innerHTML += `
                     <div class="card-os">
@@ -52,7 +54,7 @@
                             <h3>📍 Apto: ${os.apto || '---'}</h3>
                             ${tagHospede}
                         </div>
-                        <div class="info-linha">🏢 <b>Edifício:</b> ${os.endereco_condominio || 'Não informado'}</div>
+                        <div class="info-linha">🏢 <b>Edifício:</b> ${os.endereco_condominio || os.endereco_con || 'Não informado'}</div>
                         <div class="info-linha">📝 <b>Serviço:</b> ${os.descricao_servico || 'Sem descrição'}</div>
                         
                         <div class="info-acesso">
@@ -66,20 +68,25 @@
         }
 
         async function iniciar(id) {
+            console.log("Tentando iniciar ID:", id);
+            
+            // TENTATIVA 1: Atualizar apenas o status (mais seguro)
             const { error } = await sb.from('ordens_servico')
-                .update({ status: 'Em Andamento', hora_inicio: new Date().toISOString() })
+                .update({ status: 'Em Andamento' })
                 .eq('id', id);
             
             if (!error) {
                 alert("Serviço iniciado! Bom trabalho.");
                 carregar();
             } else {
-                alert("Erro ao iniciar serviço.");
+                console.error("Erro técnico:", error);
+                alert("Erro ao iniciar: " + error.message);
             }
         }
 
         carregar();
-        setInterval(carregar, 60000);
+        // Atualiza a cada 30 segundos para ser mais rápido
+        setInterval(carregar, 30000);
     </script>
 </body>
 </html>
