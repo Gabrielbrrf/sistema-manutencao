@@ -13,13 +13,14 @@
         input { flex: 1; min-width: 150px; }
         button { background: #2563eb; color: white; cursor: pointer; font-weight: bold; border: none; }
         button:hover { background: #1d4ed8; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
+        table { width: 100%; border-collapse: collapse; background: white; font-size: 13px; }
+        th, td { padding: 10px; border: 1px solid #eee; text-align: left; }
         th { background: #1e293b; color: white; }
         .status-pendente { color: #d97706; font-weight: bold; }
         .status-andamento { color: #2563eb; font-weight: bold; }
         .status-concluido { color: #059669; font-weight: bold; }
-        .info-menor { font-size: 12px; color: #64748b; display: block; margin-top: 4px; }
+        .info-menor { font-size: 11px; color: #64748b; display: block; margin-top: 4px; }
+        .btn-foto { background: #6366f1; color: white; text-decoration: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -49,14 +50,16 @@
     </div>
 
     <div class="card">
-        <h2>📋 Monitoramento</h2>
+        <h2>📋 Monitoramento de O.S</h2>
         <table id="tabela_os">
             <thead>
                 <tr>
-                    <th>Local / Endereço</th>
+                    <th>Local / Apto</th>
                     <th>Serviço / Senha</th>
                     <th>Técnico</th>
                     <th>Status</th>
+                    <th>Valor M.O</th>
+                    <th>Nota Fiscal</th>
                     <th>Ação</th>
                 </tr>
             </thead>
@@ -83,7 +86,6 @@
 
         if(!apto || !servico) { alert("Preencha o Apto e o Serviço!"); return; }
 
-        // USANDO OS NOMES EXATOS DAS COLUNAS DO SEU SUPABASE
         const { error } = await sb.from('ordens_servico').insert([{
             apto: apto,
             endereco_condominio: endereco, 
@@ -94,18 +96,19 @@
             status: 'Aberto'
         }]);
 
-        if (error) {
-            console.error(error);
-            alert("Erro ao salvar: " + error.message);
-        } else {
-            alert("Serviço lançado!");
-            location.reload();
-        }
+        if (error) alert("Erro: " + error.message);
+        else { alert("Serviço lançado!"); carregar(); }
     }
 
     async function carregar() {
-        const { data, error } = await sb.from('ordens_servico').select('*').order('id', {ascending: false});
-        if (error) return;
+        // BUSCA A OS E JÁ TRAZ OS DADOS DA TABELA DE NOTAS JUNTO
+        const { data, error } = await sb
+            .from('ordens_servico')
+            .select('*, notas_fiscaiss(valor, url_foto)')
+            .order('created_at', {ascending: false});
+
+        if (error) { console.error(error); return; }
+        
         const l = document.getElementById('lista');
         l.innerHTML = '';
 
@@ -114,21 +117,33 @@
             if(o.status === 'Em Andamento') statusClasse = 'status-andamento';
             if(o.status === 'Concluido') statusClasse = 'status-concluido';
 
+            // Pega os dados da nota fiscal (se existir)
+            const nota = o.notas_fiscaiss?.[0]; 
+            const valorMO = nota ? `R$ ${nota.valor}` : '---';
+            const linkFoto = nota ? `<a href="${nota.url_foto}" target="_blank" class="btn-foto">🖼️ Ver NF</a>` : '---';
+
             l.innerHTML += `
                 <tr>
-                    <td><strong>${o.apto}</strong><span class="info-menor">📍 ${o.endereco_con || '---'}</span></td>
-                    <td>${o.descricao_serv}<span class="info-menor">🔑 Acesso: ${o.senha_porta || 'Chave'}</span></td>
+                    <td><strong>${o.apto}</strong><span class="info-menor">📍 ${o.endereco_condominio || '---'}</span></td>
+                    <td>${o.descricao_servico || '---'}<span class="info-menor">🔑 Senha: ${o.senha_porta || '---'}</span></td>
                     <td>${o.tecnico}</td>
                     <td><span class="${statusClasse}">${o.status}</span></td>
-                    <td><button onclick="del(${o.id})" style="background:#ef4444; padding:5px 10px;">🗑️</button></td>
+                    <td><strong>${valorMO}</strong></td>
+                    <td>${linkFoto}</td>
+                    <td><button onclick="del('${o.id}')" style="background:#ef4444; padding:5px 10px; border-radius:4px;">🗑️</button></td>
                 </tr>`;
         });
     }
 
-    async function del(id) { if(confirm('Excluir?')) { await sb.from('ordens_servico').delete().eq('id', id); carregar(); } }
+    async function del(id) { 
+        if(confirm('Excluir esta OS?')) { 
+            await sb.from('ordens_servico').delete().eq('id', id); 
+            carregar(); 
+        } 
+    }
     
     carregar();
-    setInterval(carregar, 30000);
+    setInterval(carregar, 15000); // Atualiza a cada 15 seg
 </script>
 </body>
 </html>
