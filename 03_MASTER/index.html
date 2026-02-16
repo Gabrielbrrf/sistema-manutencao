@@ -13,14 +13,10 @@
         table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
         th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
         th { background: #1e293b; color: white; }
-        
         .status-pendente { color: #d97706; font-weight: bold; }
         .status-andamento { color: #2563eb; font-weight: bold; animation: pulse 2s infinite; }
         .status-concluido { color: #059669; font-weight: bold; }
-        
-        .badge-hospede { background: #fee2e2; color: #991b1b; padding: 2px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 5px; }
         .info-menor { font-size: 12px; color: #64748b; display: block; margin-top: 4px; }
-        .btn-nf { background: #10b981; font-size: 10px; padding: 5px; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
@@ -28,22 +24,19 @@
     <div class="card">
         <h2>🚀 Novo Chamado</h2>
         <div style="display: flex; flex-wrap: wrap; gap: 5px;">
-            <input type="text" id="c" placeholder="Local (Ex: Apto 101)">
-            <input type="text" id="end" placeholder="Endereço / Edifício">
-            <input type="text" id="d" placeholder="O que precisa ser feito?">
-            
-            <select id="h">
-                <option value="NÃO">Hóspede no local? NÃO</option>
-                <option value="SIM">Hóspede no local? SIM</option>
+            <input type="text" id="apto" placeholder="Apto (Ex: 101)">
+            <input type="text" id="edificio" placeholder="Edifício / Condomínio">
+            <input type="text" id="desc" placeholder="Descrição do Serviço">
+            <select id="hosp">
+                <option value="Sim">Hóspede no local? SIM</option>
+                <option value="Não">Hóspede no local? NÃO</option>
             </select>
-
-            <select id="tipo_acesso" onchange="toggleSenha()">
+            <select id="tipo_acesso" onchange="document.getElementById('senha_input').style.display = (this.value=='Senha')?'block':'none'">
                 <option value="Chave">Acesso: Chave</option>
                 <option value="Senha">Acesso: Senha</option>
             </select>
-            <input type="text" id="senha_acesso" placeholder="Digite a Senha" style="display:none; border-color: #2563eb;">
-
-            <select id="t">
+            <input type="text" id="senha_input" placeholder="Digite a Senha" style="display:none;">
+            <select id="tec">
                 <option value="Israel Sillas">Israel Sillas</option>
                 <option value="Wil Sampaio">Wil Sampaio</option>
             </select>
@@ -52,14 +45,13 @@
     </div>
 
     <div class="card">
-        <h2>📋 Monitoramento de Obras</h2>
+        <h2>📋 Monitoramento</h2>
         <table>
             <thead>
                 <tr>
-                    <th>Unidade / Endereço</th>
-                    <th>Serviço / Acesso</th>
+                    <th>Local</th>
+                    <th>Serviço</th>
                     <th>Técnico</th>
-                    <th>Financeiro</th>
                     <th>Status</th>
                     <th>Ação</th>
                 </tr>
@@ -68,84 +60,48 @@
         </table>
     </div>
 
-<script>
-    const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
+    <script>
+        const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
-    function toggleSenha() {
-        const tipo = document.getElementById('tipo_acesso').value;
-        document.getElementById('senha_acesso').style.display = (tipo === 'Senha') ? 'inline-block' : 'none';
-    }
+        async function salvar() {
+            const apto = document.getElementById('apto').value;
+            const edificio = document.getElementById('edificio').value;
+            const desc = document.getElementById('desc').value;
+            const hosp = document.getElementById('hosp').value;
+            const acesso = document.getElementById('tipo_acesso').value;
+            const senha = document.getElementById('senha_input').value;
+            const tec = document.getElementById('tec').value;
 
-    async function salvar() {
-        const local = document.getElementById('c').value;
-        const endereco = document.getElementById('end').value;
-        const desc = document.getElementById('d').value;
-        const hosp = document.getElementById('h').value;
-        const tipoAcesso = document.getElementById('tipo_acesso').value;
-        const senhaAcesso = document.getElementById('senha_acesso').value;
-        const tec = document.getElementById('t').value;
+            const { error } = await sb.from('ordens_servico').insert([{
+                apto: apto,
+                endereco_con: edificio,
+                descricao_serv: desc,
+                hospede_no_a: hosp,
+                senha_porta: acesso === 'Senha' ? senha : 'Chave',
+                tecnico: tec,
+                status: 'Aberto'
+            }]);
 
-        if(!local || !desc) { alert("Preencha Local e Serviço!"); return; }
+            if (error) alert("Erro ao salvar!"); else location.reload();
+        }
 
-        const infoAcesso = tipoAcesso === 'Senha' ? `SENHA: ${senhaAcesso}` : 'ACESSO: CHAVE';
-
-        await sb.from('ordens_servico').insert([{ 
-            cliente: local, 
-            unidade: endereco,
-            descricao_servico: desc, 
-            contato: infoAcesso,
-            tecnico: tec, 
-            status: 'Pendente',
-            observacoes: hosp 
-        }]);
-        location.reload();
-    }
-
-    async function carregar() {
-        const { data } = await sb.from('ordens_servico').select('*').order('id', {ascending: false});
-        const l = document.getElementById('lista');
-        l.innerHTML = '';
-
-        data.forEach(o => {
-            const fin = (o.status === 'Concluido' || o.status === 'Finalizado') 
-                ? `R$ ${o.valor_mao_de_obra || 0} + R$ ${o.valor_gasto || 0}` 
-                : '---';
-            
-            const nf = o.foto_nf ? `<button class="btn-nf" onclick="verNF('${o.foto_nf}')">VER NF</button>` : '';
-            
-            let classeStatus = 'status-pendente';
-            if(o.status === 'Em Andamento') classeStatus = 'status-andamento';
-            if(o.status === 'Concluido' || o.status === 'Finalizado') classeStatus = 'status-concluido';
-
-            const tagHospede = o.observacoes === 'SIM' ? '<br><span class="badge-hospede">⚠️ HÓSPEDE NO LOCAL</span>' : '';
-
-            l.innerHTML += `
-                <tr>
-                    <td>
-                        <strong>${o.cliente}</strong>${tagHospede}
-                        <span class="info-menor">📍 ${o.unidade || '---'}</span>
-                    </td>
-                    <td>
-                        ${o.descricao_servico}
-                        <span class="info-menor">🔑 ${o.contato || '---'}</span>
-                    </td>
+        async function carregar() {
+            const { data } = await sb.from('ordens_servico').select('*').order('id', {ascending: false});
+            const l = document.getElementById('lista');
+            l.innerHTML = '';
+            data.forEach(o => {
+                let cl = o.status === 'Aberto' ? 'status-pendente' : (o.status === 'Em Andamento' ? 'status-andamento' : 'status-concluido');
+                l.innerHTML += `<tr>
+                    <td><b>${o.apto}</b><span class="info-menor">${o.endereco_con}</span></td>
+                    <td>${o.descricao_serv}<span class="info-menor">🔑 ${o.senha_porta}</span></td>
                     <td>${o.tecnico}</td>
-                    <td>${fin} ${nf}</td>
-                    <td><span class="${classeStatus}">${o.status.toUpperCase()}</span></td>
+                    <td><span class="${cl}">${o.status}</span></td>
                     <td><button onclick="del(${o.id})">🗑️</button></td>
                 </tr>`;
-        });
-    }
-
-    function verNF(base64) {
-        const win = window.open("");
-        win.document.write(`<img src="${base64}" style="width:100%">`);
-    }
-
-    async function del(id) { if(confirm('Excluir permanentemente?')) { await sb.from('ordens_servico').delete().eq('id', id); carregar(); } }
-    
-    carregar();
-    setInterval(carregar, 30000);
-</script>
+            });
+        }
+        async function del(id) { if(confirm('Excluir?')) { await sb.from('ordens_servico').delete().eq('id', id); carregar(); } }
+        carregar();
+    </script>
 </body>
 </html>
