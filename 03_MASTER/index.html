@@ -20,7 +20,7 @@
         .status-andamento { color: #2563eb; font-weight: bold; }
         .status-concluido { color: #059669; font-weight: bold; }
         .info-menor { font-size: 11px; color: #64748b; display: block; margin-top: 4px; }
-        .btn-foto { background: #6366f1; color: white; text-decoration: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+        .btn-foto { background: #6366f1; color: white; text-decoration: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; display: inline-block; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -97,62 +97,73 @@
         }]);
 
         if (error) alert("Erro: " + error.message);
-        else { alert("Serviço lançado!"); carregar(); }
+        else { 
+            alert("Serviço lançado!"); 
+            document.getElementById('v_apto').value = '';
+            document.getElementById('v_serv').value = '';
+            carregar(); 
+        }
     }
 
     async function carregar() {
-    // Buscamos as ordens primeiro
-    const { data: ordens, error: erroOrdem } = await sb
-        .from('ordens_servico')
-        .select('*')
-        .order('created_at', { ascending: false });
+        try {
+            // Busca ordens usando 'data_abertura' conforme seu Supabase
+            const { data: ordens, error: erroOrdem } = await sb
+                .from('ordens_servico')
+                .select('*')
+                .order('data_abertura', { ascending: false });
 
-    if (erroOrdem) {
-        console.error("Erro ao buscar ordens:", erroOrdem);
-        return;
+            if (erroOrdem) throw erroOrdem;
+
+            // Busca as notas fiscais (com SS no final)
+            const { data: notas, error: erroNotas } = await sb
+                .from('notas_fiscaiss')
+                .select('*');
+
+            const l = document.getElementById('lista');
+            l.innerHTML = '';
+
+            if (!ordens || ordens.length === 0) {
+                l.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma ordem no banco.</td></tr>';
+                return;
+            }
+
+            ordens.forEach(o => {
+                let statusClasse = 'status-pendente';
+                if(o.status === 'Em Andamento') statusClasse = 'status-andamento';
+                if(o.status === 'Concluido') statusClasse = 'status-concluido';
+
+                // Cruza as tabelas pelo ID da OS
+                const nota = notas ? notas.find(n => n.os_id === o.id) : null;
+                
+                const valorMO = nota ? `R$ ${nota.valor}` : '---';
+                const linkFoto = nota ? `<a href="${nota.url_foto}" target="_blank" class="btn-foto">🖼️ VER NOTA</a>` : '---';
+
+                l.innerHTML += `
+                    <tr>
+                        <td><strong>${o.apto || '---'}</strong><span class="info-menor">📍 ${o.endereco_condominio || '---'}</span></td>
+                        <td>${o.descricao_servico || '---'}<span class="info-menor">🔑 Senha: ${o.senha_porta || '---'}</span></td>
+                        <td>${o.tecnico || '---'}</td>
+                        <td><span class="${statusClasse}">${o.status}</span></td>
+                        <td><strong>${valorMO}</strong></td>
+                        <td>${linkFoto}</td>
+                        <td><button onclick="del('${o.id}')" style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">🗑️</button></td>
+                    </tr>`;
+            });
+        } catch (e) {
+            console.error("Erro ao carregar:", e);
+        }
     }
-
-    // Buscamos todas as notas fiscais
-    const { data: notas, error: erroNotas } = await sb
-        .from('notas_fiscaiss')
-        .select('*');
-
-    const l = document.getElementById('lista');
-    l.innerHTML = '';
-
-    ordens.forEach(o => {
-        let statusClasse = 'status-pendente';
-        if(o.status === 'Em Andamento') statusClasse = 'status-andamento';
-        if(o.status === 'Concluido') statusClasse = 'status-concluido';
-
-        // Procura se existe uma nota para esta OS específica
-        const nota = notas ? notas.find(n => n.os_id === o.id) : null;
-        
-        const valorMO = nota ? `R$ ${nota.valor}` : '---';
-        const linkFoto = nota ? `<a href="${nota.url_foto}" target="_blank" class="btn-foto">🖼️ Ver NF</a>` : '---';
-
-        l.innerHTML += `
-            <tr>
-                <td><strong>${o.apto || '---'}</strong><span class="info-menor">📍 ${o.endereco_condominio || '---'}</span></td>
-                <td>${o.descricao_servico || '---'}<span class="info-menor">🔑 Senha: ${o.senha_porta || '---'}</span></td>
-                <td>${o.tecnico || '---'}</td>
-                <td><span class="${statusClasse}">${o.status}</span></td>
-                <td><strong>${valorMO}</strong></td>
-                <td>${linkFoto}</td>
-                <td><button onclick="del('${o.id}')" style="background:#ef4444; padding:5px 10px; border-radius:4px;">🗑️</button></td>
-            </tr>`;
-    });
-}
-
     async function del(id) { 
-        if(confirm('Excluir esta OS?')) { 
-            await sb.from('ordens_servico').delete().eq('id', id); 
-            carregar(); 
+        if(confirm('Excluir esta OS permanentemente?')) { 
+            const { error } = await sb.from('ordens_servico').delete().eq('id', id); 
+            if (error) alert("Erro ao excluir: " + error.message);
+            else carregar(); 
         } 
     }
     
     carregar();
-    setInterval(carregar, 15000); // Atualiza a cada 15 seg
+    setInterval(carregar, 15000); 
 </script>
 </body>
 </html>
