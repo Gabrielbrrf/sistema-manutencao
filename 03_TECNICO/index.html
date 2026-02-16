@@ -31,7 +31,6 @@
 
             if (error) {
                 console.error("Erro ao carregar:", error);
-                document.getElementById('lista-chamados').innerHTML = "Erro ao carregar.";
                 return;
             }
 
@@ -44,8 +43,8 @@
             }
 
             data.forEach(os => {
-                const hospede = os.hospede_no_apto || os.hospede_no_a;
-                const tagHospede = hospede === 'Sim' ? '<span class="badge-hospede">⚠️ COM HÓSPEDE</span>' : '';
+                // Ajustado para os nomes reais das suas colunas: hospede_no_apto e endereco_condominio
+                const tagHospede = os.hospede_no_apto === 'Sim' ? '<span class="badge-hospede">⚠️ COM HÓSPEDE</span>' : '';
                 const estaAndamento = os.status === 'Em Andamento';
 
                 container.innerHTML += `
@@ -54,41 +53,43 @@
                             <h3>📍 Apto: ${os.apto || '---'}</h3>
                             ${tagHospede}
                         </div>
-                        <div class="info-linha">🏢 <b>Edifício:</b> ${os.endereco_condominio || os.endereco_con || 'Não informado'}</div>
+                        <div class="info-linha">🏢 <b>Edifício:</b> ${os.endereco_condominio || 'Não informado'}</div>
                         <div class="info-linha">📝 <b>Serviço:</b> ${os.descricao_servico || 'Sem descrição'}</div>
                         
                         <div class="info-acesso">
                             <b>🔑 FORMA DE ACESSO:</b><br>
-                            <span style="font-size: 18px; font-weight: bold;">${os.senha_porta || 'Chave na Portaria'}</span>
+                            <span style="font-size: 18px; font-weight: bold;">${os.senha_porta || 'Chave'}</span>
                         </div>
 
                         <button class="btn-acao" 
                                 style="background: ${estaAndamento ? '#64748b' : '#10b981'}" 
                                 onclick="iniciar(${os.id}, '${os.status}')">
-                            ${estaAndamento ? 'INICIADO (FINALIZAR?)' : 'INICIAR SERVIÇO'}
+                            ${estaAndamento ? 'FINALIZAR SERVIÇO' : 'INICIAR SERVIÇO'}
                         </button>
                     </div>`;
             });
         }
 
         async function iniciar(id, statusAtual) {
-            // Se já está em andamento, vamos perguntar se quer concluir
             const novoStatus = (statusAtual === 'Em Andamento') ? 'Concluido' : 'Em Andamento';
-            const acao = (novoStatus === 'Concluido') ? 'concluir' : 'iniciar';
+            const agora = new Date().toISOString();
 
-            if(!confirm(`Deseja ${acao} este serviço?`)) return;
+            // Criamos o objeto de atualização
+            let dadosUpdate = { status: novoStatus };
+            
+            // Se estiver iniciando, grava a hora_inicio. Se finalizando, hora_conclusao.
+            if (novoStatus === 'Em Andamento') dadosUpdate.hora_inicio = agora;
+            if (novoStatus === 'Concluido') dadosUpdate.hora_conclusao = agora;
 
             const { error } = await sb.from('ordens_servico')
-                .update({ status: novoStatus })
+                .update(dadosUpdate)
                 .eq('id', id);
             
             if (!error) {
-                alert("Status atualizado!");
+                alert("Status atualizado com sucesso!");
                 carregar();
             } else {
-                // AQUI ELE VAI TE FALAR O ERRO REAL
-                alert("ERRO DO BANCO: " + error.message);
-                console.error(error);
+                alert("Erro ao atualizar: " + error.message);
             }
         }
 
