@@ -12,7 +12,7 @@
         // Se não for MASTER, expulsa para o portal
         if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
             alert("Área Restrita!");
-            window.location.href = "../portal.html";
+            window.location.href = "../00_Portal/portal.html";
         }
     })();
 </script>
@@ -135,4 +135,5 @@
         carregarRelatorios();
     </script>
 </body>
+
 </html>
