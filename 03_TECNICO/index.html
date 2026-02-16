@@ -9,7 +9,7 @@
         body { font-family: sans-serif; background: #f1f5f9; padding: 15px; }
         .card-os { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn-acao { background: #10b981; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; }
-        .input-finalizar { width: 93%; padding: 10px; margin-top: 10px; border-radius: 6px; border: 1px solid #cbd5e1; }
+        .input-finalizar { width: 93%; padding: 10px; margin-top: 10px; border-radius: 6px; border: 1px solid #cbd5e1; display: block; }
     </style>
 </head>
 <body>
@@ -17,17 +17,18 @@
     <div id="lista-chamados">Carregando...</div>
 
     <script>
+        // CLIENTE SUPABASE
         const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
         async function carregar() {
             const { data, error } = await sb.from('ordens_servico').select('*').neq('status', 'Concluido').order('id', { ascending: false });
-            if (error) return;
+            if (error) { alert("Erro ao buscar: " + error.message); return; }
 
             const container = document.getElementById('lista-chamados');
             container.innerHTML = '';
 
             data.forEach(os => {
-                const estaAndamento = os.status === 'Em Andamento';
+                const estaAndamento = (os.status === 'Em Andamento');
                 
                 container.innerHTML += `
                     <div class="card-os" style="border-left-color: ${estaAndamento ? '#f59e0b' : '#2563eb'}">
@@ -35,56 +36,58 @@
                         <p>📝 ${os.descricao_servico || '---'}</p>
                         
                         ${estaAndamento ? `
-                            <div id="form-finalizar-${os.id}">
-                                <input type="number" id="valor-${os.id}" class="input-finalizar" placeholder="Valor do Serviço (R$)">
-                                <input type="text" id="nf-${os.id}" class="input-finalizar" placeholder="Número da NF">
-                                <button class="btn-acao" style="background: #ef4444" onclick="finalizarServico(${os.id})">FINALIZAR E ENVIAR</button>
+                            <div>
+                                <input type="number" id="val-${os.id}" class="input-finalizar" placeholder="R$ Valor">
+                                <input type="text" id="nf-${os.id}" class="input-finalizar" placeholder="Nº Nota Fiscal">
+                                <button class="btn-acao" style="background: #ef4444" onclick="finalizar(${os.id})">FINALIZAR AGORA</button>
                             </div>
                         ` : `
-                            <button class="btn-acao" onclick="iniciarServico(${os.id})">🚀 INICIAR SERVIÇO</button>
+                            <button class="btn-acao" onclick="iniciar(${os.id})">INICIAR SERVIÇO</button>
                         `}
                     </div>`;
             });
         }
 
-        async function iniciarServico(id) {
-            const agora = new Date().toISOString();
+        async function iniciar(id) {
+            alert("Iniciando serviço " + id);
             const { error } = await sb.from('ordens_servico')
-                .update({ status: 'Em Andamento', hora_inicio: agora })
+                .update({ status: 'Em Andamento', hora_inicio: new Date().toISOString() })
                 .eq('id', id);
 
-            if (!error) {
-                alert("Serviço Iniciado!");
-                carregar();
+            if (error) {
+                alert("Erro ao Iniciar: " + error.message);
             } else {
-                alert("Erro: " + error.message);
+                carregar();
             }
         }
 
-        async function finalizarServico(id) {
-            const valor = document.getElementById(`valor-${id}`).value;
-            const nf = document.getElementById(`nf-${id}`).value;
-            const agora = new Date().toISOString();
+        async function finalizar(id) {
+            const v = document.getElementById(`val-${id}`).value;
+            const n = document.getElementById(`nf-${id}`).value;
 
-            if (!valor || !nf) {
-                alert("Por favor, preencha o Valor e a NF para finalizar!");
+            if (!v || !n) {
+                alert("Preencha Valor e NF!");
                 return;
             }
 
+            alert("Finalizando...");
+
+            // ATENÇÃO GABS: Se der erro aqui, o alerta vai dizer qual coluna está errada
             const { error } = await sb.from('ordens_servico')
                 .update({ 
                     status: 'Concluido', 
-                    hora_conclusao: agora,
-                    valor_servico: valor, // Confirme se o nome da coluna é este
-                    numero_nf: nf         // Confirme se o nome da coluna é este
+                    hora_conclusao: new Date().toISOString(),
+                    valor_servico: v,  // VERIFIQUE SE ESSE NOME TÁ IGUAL NO SUPABASE
+                    numero_nf: n       // VERIFIQUE SE ESSE NOME TÁ IGUAL NO SUPABASE
                 })
                 .eq('id', id);
 
-            if (!error) {
-                alert("Serviço Concluído com Sucesso!");
-                carregar();
+            if (error) {
+                alert("Erro ao Finalizar: " + error.message);
+                console.error(error);
             } else {
-                alert("Erro ao finalizar: " + error.message);
+                alert("Serviço Concluído!");
+                carregar();
             }
         }
 
