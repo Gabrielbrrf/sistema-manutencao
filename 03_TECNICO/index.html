@@ -7,35 +7,81 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: sans-serif; background: #f8fafc; padding: 15px; }
-        .card-os { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .info-acesso { background: #f1f5f9; padding: 8px; border-radius: 6px; font-size: 14px; margin: 10px 0; border: 1px solid #e2e8f0; }
-        .btn-acao { background: #10b981; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .card-os { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h3 { margin-top: 0; color: #1e293b; }
+        .info-linha { margin: 8px 0; font-size: 15px; color: #334155; }
+        .info-acesso { background: #fef9c3; padding: 10px; border-radius: 8px; font-size: 14px; margin: 10px 0; border: 1px solid #fde047; color: #854d0e; }
+        .btn-acao { background: #10b981; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .btn-acao:active { transform: scale(0.98); background: #059669; }
+        .badge-hospede { background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h2>🛠️ Meus Serviços</h2>
-    <div id="lista-chamados"></div>
+    <h2 style="color: #1e293b;">🛠️ Meus Serviços</h2>
+    <div id="lista-chamados">Carregando serviços...</div>
 
     <script>
         const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
         async function carregar() {
-            const { data } = await sb.from('ordens_servico').select('*').neq('status', 'Concluido');
+            // Puxa serviços que não estão concluídos
+            const { data, error } = await sb.from('ordens_servico')
+                .select('*')
+                .neq('status', 'Concluido')
+                .order('id', { ascending: false });
+
+            if (error) {
+                console.error(error);
+                document.getElementById('lista-chamados').innerHTML = "Erro ao carregar dados.";
+                return;
+            }
+
             const container = document.getElementById('lista-chamados');
             container.innerHTML = '';
+
+            if (data.length === 0) {
+                container.innerHTML = '<p>Nenhum serviço pendente no momento. 🙌</p>';
+                return;
+            }
+
             data.forEach(os => {
+                const tagHospede = os.hospede_no_a === 'Sim' ? '<span class="badge-hospede">⚠️ COM HÓSPEDE</span>' : '';
+                
                 container.innerHTML += `
                     <div class="card-os">
-                        <h3>📍 Apto: ${os.apto}</h3>
-                        <p>🏢 <b>Edifício:</b> ${os.endereco_con}</p>
-                        <p>📝 <b>Serviço:</b> ${os.descricao_serv}</p>
-                        <div class="info-acesso"><b>🔑 ACESSO:</b> ${os.senha_porta}</div>
-                        <p>👤 <b>Hóspede no local?</b> ${os.hospede_no_a}</p>
+                        <div style="display:flex; justify-content:space-between; align-items:start;">
+                            <h3>📍 Apto: ${os.apto || '---'}</h3>
+                            ${tagHospede}
+                        </div>
+                        <div class="info-linha">🏢 <b>Edifício:</b> ${os.endereco_con || 'Não informado'}</div>
+                        <div class="info-linha">📝 <b>Serviço:</b> ${os.descricao_serv || 'Sem descrição'}</div>
+                        
+                        <div class="info-acesso">
+                            <b>🔑 FORMA DE ACESSO:</b><br>
+                            <span style="font-size: 18px; font-weight: bold;">${os.senha_porta || 'Chave na Portaria'}</span>
+                        </div>
+
                         <button class="btn-acao" onclick="iniciar(${os.id})">INICIAR SERVIÇO</button>
                     </div>`;
             });
         }
+
+        async function iniciar(id) {
+            const { error } = await sb.from('ordens_servico')
+                .update({ status: 'Em Andamento', hora_inicio: new Date().toISOString() })
+                .eq('id', id);
+            
+            if (!error) {
+                alert("Serviço iniciado! Bom trabalho.");
+                carregar();
+            } else {
+                alert("Erro ao iniciar serviço.");
+            }
+        }
+
+        // Carrega ao abrir e atualiza a cada 1 minuto
         carregar();
+        setInterval(carregar, 60000);
     </script>
 </body>
 </html>
