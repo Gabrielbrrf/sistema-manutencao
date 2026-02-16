@@ -10,16 +10,16 @@
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
         input, select, button { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; }
         button { background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th, td { padding: 10px; border: 1px solid #eee; text-align: left; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
+        th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
         th { background: #1e293b; color: white; }
         
-        /* Cores dos Status */
         .status-pendente { color: #d97706; font-weight: bold; }
         .status-andamento { color: #2563eb; font-weight: bold; animation: pulse 2s infinite; }
         .status-concluido { color: #059669; font-weight: bold; }
         
-        .badge-hospede { background: #fee2e2; color: #991b1b; padding: 2px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-hospede { background: #fee2e2; color: #991b1b; padding: 2px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 5px; }
+        .info-menor { font-size: 12px; color: #64748b; display: block; margin-top: 4px; }
         .btn-nf { background: #10b981; font-size: 10px; padding: 5px; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
@@ -27,19 +27,28 @@
 <body>
     <div class="card">
         <h2>🚀 Novo Chamado</h2>
-        <input type="text" id="c" placeholder="Local (Ex: Apto 101)">
-        <input type="text" id="d" placeholder="O que precisa ser feito?">
-        
-        <select id="h">
-            <option value="NÃO">Hóspede no local? NÃO</option>
-            <option value="SIM">Hóspede no local? SIM</option>
-        </select>
+        <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+            <input type="text" id="c" placeholder="Local (Ex: Apto 101)">
+            <input type="text" id="end" placeholder="Endereço / Edifício">
+            <input type="text" id="d" placeholder="O que precisa ser feito?">
+            
+            <select id="h">
+                <option value="NÃO">Hóspede no local? NÃO</option>
+                <option value="SIM">Hóspede no local? SIM</option>
+            </select>
 
-        <select id="t">
-            <option value="Israel Sillas">Israel Sillas</option>
-            <option value="Wil Sampaio">Wil Sampaio</option>
-        </select>
-        <button onclick="salvar()">LANÇAR SERVIÇO</button>
+            <select id="tipo_acesso" onchange="toggleSenha()">
+                <option value="Chave">Acesso: Chave</option>
+                <option value="Senha">Acesso: Senha</option>
+            </select>
+            <input type="text" id="senha_acesso" placeholder="Digite a Senha" style="display:none; border-color: #2563eb;">
+
+            <select id="t">
+                <option value="Israel Sillas">Israel Sillas</option>
+                <option value="Wil Sampaio">Wil Sampaio</option>
+            </select>
+            <button onclick="salvar()">LANÇAR SERVIÇO</button>
+        </div>
     </div>
 
     <div class="card">
@@ -47,8 +56,8 @@
         <table>
             <thead>
                 <tr>
-                    <th>Local / Hóspede</th>
-                    <th>Serviço</th>
+                    <th>Unidade / Endereço</th>
+                    <th>Serviço / Acesso</th>
                     <th>Técnico</th>
                     <th>Financeiro</th>
                     <th>Status</th>
@@ -62,21 +71,32 @@
 <script>
     const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
+    function toggleSenha() {
+        const tipo = document.getElementById('tipo_acesso').value;
+        document.getElementById('senha_acesso').style.display = (tipo === 'Senha') ? 'inline-block' : 'none';
+    }
+
     async function salvar() {
         const local = document.getElementById('c').value;
+        const endereco = document.getElementById('end').value;
         const desc = document.getElementById('d').value;
         const hosp = document.getElementById('h').value;
+        const tipoAcesso = document.getElementById('tipo_acesso').value;
+        const senhaAcesso = document.getElementById('senha_acesso').value;
         const tec = document.getElementById('t').value;
 
         if(!local || !desc) { alert("Preencha Local e Serviço!"); return; }
 
+        const infoAcesso = tipoAcesso === 'Senha' ? `SENHA: ${senhaAcesso}` : 'ACESSO: CHAVE';
+
         await sb.from('ordens_servico').insert([{ 
             cliente: local, 
+            unidade: endereco,
             descricao_servico: desc, 
+            contato: infoAcesso,
             tecnico: tec, 
             status: 'Pendente',
-            // Usamos uma coluna extra ou concatenamos na descrição para o técnico ver
-            observacoes: hosp // Salvando a info do hóspede aqui
+            observacoes: hosp 
         }]);
         location.reload();
     }
@@ -93,7 +113,6 @@
             
             const nf = o.foto_nf ? `<button class="btn-nf" onclick="verNF('${o.foto_nf}')">VER NF</button>` : '';
             
-            // Lógica de cores do Status
             let classeStatus = 'status-pendente';
             if(o.status === 'Em Andamento') classeStatus = 'status-andamento';
             if(o.status === 'Concluido' || o.status === 'Finalizado') classeStatus = 'status-concluido';
@@ -102,8 +121,14 @@
 
             l.innerHTML += `
                 <tr>
-                    <td><strong>${o.cliente}</strong>${tagHospede}</td>
-                    <td>${o.descricao_servico}</td>
+                    <td>
+                        <strong>${o.cliente}</strong>${tagHospede}
+                        <span class="info-menor">📍 ${o.unidade || '---'}</span>
+                    </td>
+                    <td>
+                        ${o.descricao_servico}
+                        <span class="info-menor">🔑 ${o.contato || '---'}</span>
+                    </td>
                     <td>${o.tecnico}</td>
                     <td>${fin} ${nf}</td>
                     <td><span class="${classeStatus}">${o.status.toUpperCase()}</span></td>
@@ -120,7 +145,6 @@
     async function del(id) { if(confirm('Excluir permanentemente?')) { await sb.from('ordens_servico').delete().eq('id', id); carregar(); } }
     
     carregar();
-    // Atualiza a cada 30 segundos sozinho para você ver o "Em Andamento"
     setInterval(carregar, 30000);
 </script>
 </body>
