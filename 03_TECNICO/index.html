@@ -3,64 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Técnico Gabs</title>
+    <title>Técnico - Gabs OS</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: sans-serif; background: #f1f5f9; padding: 15px; }
-        .card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #2563eb; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .input { width: 90%; padding: 10px; margin-top: 10px; display: block; border: 1px solid #ccc; border-radius: 4px; }
+        .card-os { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 8px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-acao { background: #10b981; color: white; width: 100%; padding: 18px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; text-transform: uppercase; }
+        .input-finalizar { width: 92%; padding: 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #cbd5e1; display: block; font-size: 14px; }
     </style>
 </head>
 <body>
-    <h2>🛠️ Meus Serviços</h2>
-    <div id="lista">Carregando...</div>
+    <h2 style="color: #1e293b;">🛠️ Meus Serviços</h2>
+    <div id="lista-chamados">Carregando serviços...</div>
 
     <script>
+        // Conexão com seu Supabase
         const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
         async function carregar() {
-            const { data, error } = await sb.from('ordens_servico').select('*').neq('status', 'Concluido').order('id', { ascending: false });
-            const container = document.getElementById('lista');
-            container.innerHTML = '';
+            try {
+                const { data, error } = await sb.from('ordens_servico').select('*').neq('status', 'Concluido').order('id', { ascending: false });
+                if (error) throw error;
 
-            data.forEach(os => {
-                const andamento = os.status === 'Em Andamento';
-                container.innerHTML += `
-                    <div class="card" style="border-left-color: ${andamento ? '#f59e0b' : '#2563eb'}">
-                        <h3>📍 Apto: ${os.apto}</h3>
-                        <p>📝 ${os.descricao_servico || 'Sem descrição'}</p>
-                        ${andamento ? `
-                            <input type="number" id="v-${os.id}" class="input" placeholder="Valor Mão de Obra">
-                            <input type="text" id="n-${os.id}" class="input" placeholder="NF ou Link">
-                            <button class="btn" style="background:#ef4444; color:white;" onclick="finalizar(${os.id})">FINALIZAR</button>
-                        ` : `
-                            <button class="btn" style="background:#10b981; color:white;" onclick="iniciar(${os.id})">INICIAR SERVIÇO</button>
-                        `}
-                    </div>`;
-            });
+                const container = document.getElementById('lista-chamados');
+                container.innerHTML = '';
+
+                data.forEach(os => {
+                    const estaAndamento = (os.status === 'Em Andamento');
+                    container.innerHTML += `
+                        <div class="card-os" style="border-left-color: ${estaAndamento ? '#f59e0b' : '#10b981'}">
+                            <h3 style="margin-top:0;">📍 Apto: ${os.apto || '---'}</h3>
+                            <p style="color: #64748b;">📝 ${os.descricao_servico || 'Sem descrição'}</p>
+                            ${estaAndamento ? `
+                                <div>
+                                    <input type="number" id="val-${os.id}" class="input-finalizar" placeholder="R$ Valor da Mão de Obra">
+                                    <input type="text" id="nf-${os.id}" class="input-finalizar" placeholder="Nº da NF ou Link">
+                                    <button class="btn-acao" style="background: #ef4444" onclick="finalizar(${os.id})">Finalizar Serviço</button>
+                                </div>
+                            ` : `
+                                <button class="btn-acao" onclick="iniciar(${os.id})">Iniciar Serviço</button>
+                            `}
+                        </div>`;
+                });
+            } catch (err) {
+                alert("Erro ao carregar: " + err.message);
+            }
         }
 
         async function iniciar(id) {
-            const { error } = await sb.from('ordens_servico').update({ 
-                status: 'Em Andamento', 
-                hora_inicio: new Date().toISOString() 
-            }).eq('id', id);
-            if (!error) carregar(); else alert(error.message);
+            // Esse alerta confirma que o clique funcionou
+            console.log("Iniciando ID:", id);
+            
+            const { error } = await sb.from('ordens_servico')
+                .update({ 
+                    status: 'Em Andamento', 
+                    hora_inicio: new Date().toISOString() 
+                })
+                .eq('id', id);
+
+            if (error) {
+                alert("Erro ao Iniciar: " + error.message);
+            } else {
+                carregar(); // Recarrega a lista para mostrar os campos de Valor/NF
+            }
         }
 
         async function finalizar(id) {
-            const val = document.getElementById(`v-${id}`).value;
-            const nf = document.getElementById(`n-${id}`).value;
-            if(!val || !nf) return alert("Preencha Valor e NF!");
+            const v = document.getElementById(`val-${id}`).value;
+            const n = document.getElementById(`nf-${id}`).value;
 
-            const { error } = await sb.from('ordens_servico').update({ 
-                status: 'Concluido', 
-                hora_conclusao: new Date().toISOString(),
-                valor_mao_de_obra: val,
-                url_nota_fiscal: nf
-            }).eq('id', id);
-            if (!error) { alert("Concluído!"); carregar(); } else alert(error.message);
+            if (!v || !n) {
+                alert("Atenção: Você precisa preencher o Valor e a NF para finalizar!");
+                return;
+            }
+
+            const { error } = await sb.from('ordens_servico')
+                .update({ 
+                    status: 'Concluido', 
+                    hora_conclusao: new Date().toISOString(),
+                    valor_mao_de_obra: v,
+                    url_nota_fiscal: n
+                })
+                .eq('id', id);
+
+            if (error) {
+                alert("Erro ao Finalizar: " + error.message);
+            } else {
+                alert("✅ Serviço concluído e enviado!");
+                carregar();
+            }
         }
 
         carregar();
