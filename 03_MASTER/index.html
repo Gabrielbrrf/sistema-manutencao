@@ -101,39 +101,48 @@
     }
 
     async function carregar() {
-        // BUSCA A OS E JÁ TRAZ OS DADOS DA TABELA DE NOTAS JUNTO
-        const { data, error } = await sb
-            .from('ordens_servico')
-            .select('*, notas_fiscaiss(valor, url_foto)')
-            .order('created_at', {ascending: false});
+    // Buscamos as ordens primeiro
+    const { data: ordens, error: erroOrdem } = await sb
+        .from('ordens_servico')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        if (error) { console.error(error); return; }
-        
-        const l = document.getElementById('lista');
-        l.innerHTML = '';
-
-        data.forEach(o => {
-            let statusClasse = 'status-pendente';
-            if(o.status === 'Em Andamento') statusClasse = 'status-andamento';
-            if(o.status === 'Concluido') statusClasse = 'status-concluido';
-
-            // Pega os dados da nota fiscal (se existir)
-            const nota = o.notas_fiscaiss?.[0]; 
-            const valorMO = nota ? `R$ ${nota.valor}` : '---';
-            const linkFoto = nota ? `<a href="${nota.url_foto}" target="_blank" class="btn-foto">🖼️ Ver NF</a>` : '---';
-
-            l.innerHTML += `
-                <tr>
-                    <td><strong>${o.apto}</strong><span class="info-menor">📍 ${o.endereco_condominio || '---'}</span></td>
-                    <td>${o.descricao_servico || '---'}<span class="info-menor">🔑 Senha: ${o.senha_porta || '---'}</span></td>
-                    <td>${o.tecnico}</td>
-                    <td><span class="${statusClasse}">${o.status}</span></td>
-                    <td><strong>${valorMO}</strong></td>
-                    <td>${linkFoto}</td>
-                    <td><button onclick="del('${o.id}')" style="background:#ef4444; padding:5px 10px; border-radius:4px;">🗑️</button></td>
-                </tr>`;
-        });
+    if (erroOrdem) {
+        console.error("Erro ao buscar ordens:", erroOrdem);
+        return;
     }
+
+    // Buscamos todas as notas fiscais
+    const { data: notas, error: erroNotas } = await sb
+        .from('notas_fiscaiss')
+        .select('*');
+
+    const l = document.getElementById('lista');
+    l.innerHTML = '';
+
+    ordens.forEach(o => {
+        let statusClasse = 'status-pendente';
+        if(o.status === 'Em Andamento') statusClasse = 'status-andamento';
+        if(o.status === 'Concluido') statusClasse = 'status-concluido';
+
+        // Procura se existe uma nota para esta OS específica
+        const nota = notas ? notas.find(n => n.os_id === o.id) : null;
+        
+        const valorMO = nota ? `R$ ${nota.valor}` : '---';
+        const linkFoto = nota ? `<a href="${nota.url_foto}" target="_blank" class="btn-foto">🖼️ Ver NF</a>` : '---';
+
+        l.innerHTML += `
+            <tr>
+                <td><strong>${o.apto || '---'}</strong><span class="info-menor">📍 ${o.endereco_condominio || '---'}</span></td>
+                <td>${o.descricao_servico || '---'}<span class="info-menor">🔑 Senha: ${o.senha_porta || '---'}</span></td>
+                <td>${o.tecnico || '---'}</td>
+                <td><span class="${statusClasse}">${o.status}</span></td>
+                <td><strong>${valorMO}</strong></td>
+                <td>${linkFoto}</td>
+                <td><button onclick="del('${o.id}')" style="background:#ef4444; padding:5px 10px; border-radius:4px;">🗑️</button></td>
+            </tr>`;
+    });
+}
 
     async function del(id) { 
         if(confirm('Excluir esta OS?')) { 
