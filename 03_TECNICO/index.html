@@ -8,32 +8,34 @@
     <style>
         body { font-family: -apple-system, sans-serif; background: #f8fafc; margin: 0; padding: 15px; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .card-os { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; }
-        h3 { margin: 0 0 5px 0; color: #1e293b; font-size: 16px; }
-        p { margin: 0; color: #64748b; font-size: 14px; }
+        .card-os { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; }
+        h3 { margin: 0 0 5px 0; color: #1e293b; font-size: 18px; }
         
-        /* Alerta de Hóspede para o Técnico */
-        .alerta-hospede { background: #fee2e2; color: #991b1b; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 12px; margin: 10px 0; border: 1px solid #fecaca; text-align: center; }
+        .info-endereco { color: #1e293b; font-weight: bold; font-size: 14px; margin-bottom: 8px; display: block; }
+        .info-acesso { background: #f1f5f9; color: #475569; padding: 8px; border-radius: 6px; font-size: 13px; margin: 10px 0; border: 1px solid #e2e8f0; }
+        .info-servico { color: #64748b; font-size: 14px; margin: 10px 0; line-height: 1.4; }
         
-        .btn-iniciar { background: #10b981; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer; font-size: 14px; }
+        .alerta-hospede { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; margin: 10px 0; border: 1px solid #fecaca; text-align: center; text-transform: uppercase; }
+        
+        .btn-iniciar { background: #10b981; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer; font-size: 15px; }
         .secao-fechamento { display: none; margin-top: 15px; border-top: 2px dashed #e2e8f0; padding-top: 15px; }
         
-        label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: #1e293b; }
-        input[type="number"], input[type="file"] { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: #1e293b; text-transform: uppercase; }
+        input[type="number"], input[type="file"] { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 16px; background: #fff; }
         
-        .btn-finalizar { background: #2563eb; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .empty { text-align: center; color: #94a3b8; margin-top: 50px; }
+        .btn-finalizar { background: #2563eb; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .empty { text-align: center; color: #94a3b8; margin-top: 50px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2 style="font-size: 1.2rem; margin: 0;">🛠️ Meus Serviços</h2>
-        <button onclick="carregarChamados()" style="padding: 10px; border-radius: 50%; border: 1px solid #ccc; background: white;">🔄</button>
+        <h2 style="font-size: 1.3rem; margin: 0; color: #0f172a;">🛠️ Meus Serviços</h2>
+        <button onclick="carregarChamados()" style="padding: 10px; border-radius: 50%; border: 1px solid #cbd5e1; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">🔄</button>
     </div>
 
     <div id="lista-chamados">
-        <p class="empty">Buscando serviços...</p>
+        <p class="empty">Buscando serviços ativos...</p>
     </div>
 
     <script>
@@ -44,15 +46,14 @@
         async function carregarChamados() {
             const container = document.getElementById('lista-chamados');
             
-            // Busca o que está Pendente ou Em Andamento
             const { data, error } = await sb
                 .from('ordens_servico')
                 .select('*')
                 .or('status.eq.Pendente,status.eq.Em Andamento')
                 .order('id', { ascending: false });
 
-            if (data.length === 0) {
-                container.innerHTML = '<p class="empty">Tudo limpo por aqui! ✅</p>';
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="empty">Nenhum serviço pendente! ✅</p>';
                 return;
             }
 
@@ -64,25 +65,31 @@
                 container.innerHTML += `
                     <div class="card-os" style="border-left-color: ${jaIniciado ? '#2563eb' : '#10b981'}">
                         <h3>📍 ${os.cliente}</h3>
-                        <p>📝 ${os.descricao_servico}</p>
+                        <span class="info-endereco">🏢 ${os.unidade || 'Endereço não informado'}</span>
                         
-                        ${temHospede ? `<div class="alerta-hospede">⚠️ ATENÇÃO: HÓSPEDE NO LOCAL</div>` : ''}
+                        <div class="info-acesso">
+                            <strong>🔑 ACESSO:</strong> ${os.contato || 'Não informado'}
+                        </div>
+
+                        <p class="info-servico"><strong>📝 SERVIÇO:</strong><br>${os.descricao_servico}</p>
+                        
+                        ${temHospede ? `<div class="alerta-hospede">⚠️ HÓSPEDE NO LOCAL - CUIDADO</div>` : ''}
 
                         <button class="btn-iniciar" 
                                 id="btn-ini-${os.id}" 
                                 onclick="iniciarServico(${os.id})"
                                 style="display: ${jaIniciado ? 'none' : 'block'}">
-                            ▶️ INICIAR SERVIÇO
+                            ▶️ INICIAR TRABALHO
                         </button>
                         
                         <div id="box-${os.id}" class="secao-fechamento" style="display: ${jaIniciado ? 'block' : 'none'}">
-                            <label>VALOR MÃO DE OBRA (R$):</label>
-                            <input type="number" id="mo-${os.id}" placeholder="Ex: 50.00" step="0.01">
+                            <label>Mão de Obra (R$):</label>
+                            <input type="number" id="mo-${os.id}" placeholder="0.00" step="0.01">
                             
-                            <label>VALOR MATERIAIS (R$):</label>
-                            <input type="number" id="mat-${os.id}" placeholder="Ex: 15.00" step="0.01">
+                            <label>Materiais Gastos (R$):</label>
+                            <input type="number" id="mat-${os.id}" placeholder="0.00" step="0.01">
                             
-                            <label>FOTO DA NOTA / RECIBO:</label>
+                            <label>Foto da Nota ou Serviço:</label>
                             <input type="file" id="foto-${os.id}" accept="image/*" capture="camera">
                             
                             <button class="btn-finalizar" onclick="concluirServico(${os.id})">✅ FINALIZAR E ENVIAR</button>
@@ -93,7 +100,6 @@
         }
 
         async function iniciarServico(id) {
-            // Atualiza no banco para a Gabs ver que está em andamento
             const { error } = await sb
                 .from('ordens_servico')
                 .update({ status: 'Em Andamento' })
@@ -133,7 +139,7 @@
                 .eq('id', id);
 
             if (!error) {
-                alert("Feito! Gabs recebeu a confirmação.");
+                alert("Serviço concluído com sucesso!");
                 carregarChamados();
             }
         }
