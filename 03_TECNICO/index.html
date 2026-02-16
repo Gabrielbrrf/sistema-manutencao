@@ -8,7 +8,8 @@
     <style>
         body { font-family: sans-serif; background: #f1f5f9; padding: 15px; }
         .card-os { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn-acao { background: #10b981; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        h3 { margin: 0; color: #1e293b; }
+        .btn-acao { background: #10b981; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -16,61 +17,55 @@
     <div id="lista-chamados">Carregando...</div>
 
     <script>
-        // TESTE DE VIDA: Assim que abrir, tem que aparecer esse alerta. 
-        // Se não aparecer, o código novo não foi carregado no celular!
-        alert("Código Novo Carregado! v2.0");
-
         const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
         async function carregar() {
-            try {
-                const { data, error } = await sb.from('ordens_servico').select('*').neq('status', 'Concluido').order('id', { ascending: false });
-                if (error) throw error;
+            const { data, error } = await sb.from('ordens_servico').select('*').neq('status', 'Concluido').order('id', { ascending: false });
+            if (error) { alert("Erro ao carregar lista: " + error.message); return; }
 
-                const container = document.getElementById('lista-chamados');
-                container.innerHTML = '';
+            const container = document.getElementById('lista-chamados');
+            container.innerHTML = '';
 
-                if (data.length === 0) {
-                    container.innerHTML = '<p>Tudo limpo por aqui! 🙌</p>';
-                    return;
-                }
-
-                data.forEach(os => {
-                    const estaAndamento = os.status === 'Em Andamento';
-                    container.innerHTML += `
-                        <div class="card-os" style="border-left-color: ${estaAndamento ? '#f59e0b' : '#2563eb'}">
-                            <h3>📍 Apto: ${os.apto || '---'}</h3>
-                            <p>🏢 Edifício: ${os.endereco_condominio || '---'}</p>
-                            <p>📝 Serviço: ${os.descricao_servico || '---'}</p>
-                            <button class="btn-acao" 
-                                    style="background: ${estaAndamento ? '#ef4444' : '#10b981'}" 
-                                    onclick="mudarStatus(${os.id}, '${os.status}')">
-                                ${estaAndamento ? 'FINALIZAR' : 'INICIAR'}
-                            </button>
-                        </div>`;
-                });
-            } catch (err) {
-                alert("Erro ao carregar: " + err.message);
-            }
+            data.forEach(os => {
+                const estaAndamento = os.status === 'Em Andamento';
+                container.innerHTML += `
+                    <div class="card-os" style="border-left-color: ${estaAndamento ? '#f59e0b' : '#2563eb'}">
+                        <h3>📍 Apto: ${os.apto || '---'}</h3>
+                        <p>📝 ${os.descricao_servico || 'Sem descrição'}</p>
+                        <p>🔑 Acesso: ${os.senha_porta || 'Chave'}</p>
+                        <button class="btn-acao" 
+                                style="background: ${estaAndamento ? '#ef4444' : '#10b981'}" 
+                                onclick="mudarStatus(${os.id}, '${os.status}')">
+                            ${estaAndamento ? '🚩 FINALIZAR AGORA' : '🚀 INICIAR SERVIÇO'}
+                        </button>
+                    </div>`;
+            });
         }
 
         async function mudarStatus(id, statusAtual) {
-            // Se o botão for clicado, ESSE alerta tem que aparecer na hora!
-            alert("Botão clicado! Tentando atualizar o ID: " + id);
-
+            // Se clicar no botão, esse alerta TEM que aparecer
+            console.log("Clique detectado no ID:", id);
+            
             const novoStatus = (statusAtual === 'Em Andamento') ? 'Concluido' : 'Em Andamento';
             const agora = new Date().toISOString();
             
             let dados = { status: novoStatus };
-            if (novoStatus === 'Em Andamento') dados.hora_inicio = agora;
-            else dados.hora_conclusao = agora;
+            
+            // Aqui é onde o bicho pega: vamos tentar atualizar com a hora
+            if (novoStatus === 'Em Andamento') {
+                dados.hora_inicio = agora;
+            } else {
+                dados.hora_conclusao = agora;
+            }
 
             const { error } = await sb.from('ordens_servico').update(dados).eq('id', id);
 
             if (error) {
-                alert("ERRO NO BANCO: " + error.message);
+                // Se der erro aqui, ele vai dizer se a coluna 'hora_inicio' não existe!
+                alert("ERRO AO SALVAR: " + error.message);
+                console.error(error);
             } else {
-                alert("SUCESSO! Status: " + novoStatus);
+                alert("✅ Status atualizado!");
                 carregar();
             }
         }
