@@ -8,77 +8,89 @@
     <style>
         body { font-family: sans-serif; background: #f1f5f9; padding: 15px; }
         .card-os { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 8px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn-acao { background: #10b981; color: white; width: 100%; padding: 18px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; text-transform: uppercase; }
+        .btn-acao { background: #10b981; color: white; width: 100%; padding: 18px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; }
         .input-finalizar { width: 92%; padding: 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #cbd5e1; display: block; }
+        .btn-foto { display: block; background: #6366f1; color: white; padding: 12px; text-align: center; border-radius: 6px; margin-top: 10px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
     <h2 style="color: #1e293b;">🛠️ Meus Serviços</h2>
-    <div id="lista-chamados">Carregando lista...</div>
+    <div id="lista-chamados">Carregando serviços...</div>
 
     <script>
         const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
         async function carregar() {
             try {
-                const { data, error } = await sb.from('ordens_servico').select('*').neq('status', 'Concluido');
+                const { data, error } = await sb.from('ordens_servico').select('*').neq('status', 'Concluido').order('data_abertura', { ascending: false });
                 if (error) throw error;
-
                 const container = document.getElementById('lista-chamados');
                 container.innerHTML = '';
 
                 data.forEach(os => {
                     const estaAndamento = (os.status === 'Em Andamento');
-                    // IMPORTANTE: Colocamos aspas simples em volta do ID porque ele é um UUID (Texto)
                     container.innerHTML += `
                         <div class="card-os" style="border-left-color: ${estaAndamento ? '#f59e0b' : '#10b981'}">
                             <h3>📍 Apto: ${os.apto || '---'}</h3>
-                            <p>📝 ${os.descrição_serviço || os.descricao_servico || 'Sem descrição'}</p>
+                            <p>📝 ${os.descricao_servico || 'Sem descrição'}</p>
                             ${estaAndamento ? `
                                 <div>
-                                    <input type="number" id="val-${os.id}" class="input-finalizar" placeholder="R$ Valor">
-                                    <input type="text" id="nf-${os.id}" class="input-finalizar" placeholder="Link/Nº da NF">
-                                    <button class="btn-acao" style="background: #ef4444" onclick="finalizar('${os.id}')">FINALIZAR AGORA</button>
+                                    <input type="number" id="val-${os.id}" class="input-finalizar" placeholder="R$ Valor Mão de Obra">
+                                    <label class="btn-foto" for="foto-${os.id}">📸 TIRAR FOTO DA NF</label>
+                                    <input type="file" id="foto-${os.id}" accept="image/*" capture="environment" style="display:none" onchange="uploadFoto('${os.id}')">
+                                    <span id="msg-${os.id}" style="display:block; font-size:12px; margin-top:5px;"></span>
+                                    <input type="hidden" id="url-${os.id}">
+                                    <button class="btn-acao" style="background: #ef4444" onclick="finalizar('${os.id}')">FINALIZAR E ENVIAR</button>
                                 </div>
                             ` : `
                                 <button class="btn-acao" onclick="iniciar('${os.id}')">INICIAR SERVIÇO</button>
                             `}
                         </div>`;
                 });
-            } catch (err) {
-                alert("Erro ao carregar lista: " + err.message);
+            } catch (err) { alert(err.message); }
+        }
+
+        async function uploadFoto(id) {
+            const file = document.getElementById(`foto-${id}`).files[0];
+            const msg = document.getElementById(`msg-${id}`);
+            if (!file) return;
+
+            msg.innerText = "⏳ Enviando foto...";
+            const fileName = `nf_${id}_${Date.now()}.jpg`;
+
+            const { data, error } = await sb.storage.from('notas_fiscais').upload(fileName, file);
+
+            if (error) {
+                alert("Erro upload: " + error.message);
+                msg.innerText = "❌ Erro";
+            } else {
+                const { data: publicUrl } = sb.storage.from('notas_fiscais').getPublicUrl(fileName);
+                document.getElementById(`url-${id}`).value = publicUrl.publicUrl;
+                msg.innerText = "✅ Foto carregada!";
+                msg.style.color = "green";
             }
         }
 
         async function iniciar(id) {
-            const { error } = await sb.from('ordens_servico')
-                .update({ 
-                    status: 'Em Andamento', 
-                    hora_inicio: new Date().toISOString() 
-                })
-                .eq('id', id);
-
-            if (error) alert("Erro ao iniciar: " + error.message);
-            else carregar();
+            const { error } = await sb.from('ordens_servico').update({ status: 'Em Andamento', hora_inicio: new Date().toISOString() }).eq('id', id);
+            if (!error) carregar();
+            else alert(error.message);
         }
 
         async function finalizar(id) {
             const v = document.getElementById(`val-${id}`).value;
-            const n = document.getElementById(`nf-${id}`).value;
+            const url = document.getElementById(`url-${id}`).value;
 
-            if (!v || !n) return alert("Preencha Valor e NF!");
+            if (!v || !url) return alert("Ei! Coloque o valor e a foto da NF.");
 
-            const { error } = await sb.from('ordens_servico')
-                .update({ 
-                    status: 'Concluido', 
-                    hora_conclusao: new Date().toISOString(),
-                    valor_mao_de_obra: v,
-                    url_nota_fiscal: n
-                })
-                .eq('id', id);
+            // 1. Atualiza a OS
+            const resOS = await sb.from('ordens_servico').update({ status: 'Concluido', hora_conclusao: new Date().toISOString() }).eq('id', id);
 
-            if (error) alert("Erro ao finalizar: " + error.message);
-            else { alert("✅ OS Finalizada!"); carregar(); }
+            // 2. Salva na tabela nova notas_fiscaiss
+            const resNota = await sb.from('notas_fiscaiss').insert([{ os_id: id, valor: v, url_foto: url }]);
+
+            if (resOS.error || resNota.error) alert("Erro ao salvar dados.");
+            else { alert("✅ Sucesso! Nota enviada."); carregar(); }
         }
 
         carregar();
