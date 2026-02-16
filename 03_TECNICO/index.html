@@ -6,145 +6,36 @@
     <title>Técnico - Ordens de Serviço</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f8fafc; margin: 0; padding: 15px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .card-os { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; }
-        h3 { margin: 0 0 5px 0; color: #1e293b; font-size: 18px; }
-        
-        .info-endereco { color: #1e293b; font-weight: bold; font-size: 14px; margin-bottom: 8px; display: block; }
-        .info-acesso { background: #f1f5f9; color: #475569; padding: 8px; border-radius: 6px; font-size: 13px; margin: 10px 0; border: 1px solid #e2e8f0; }
-        .info-servico { color: #64748b; font-size: 14px; margin: 10px 0; line-height: 1.4; }
-        
-        .alerta-hospede { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; margin: 10px 0; border: 1px solid #fecaca; text-align: center; text-transform: uppercase; }
-        
-        .btn-iniciar { background: #10b981; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer; font-size: 15px; }
-        .secao-fechamento { display: none; margin-top: 15px; border-top: 2px dashed #e2e8f0; padding-top: 15px; }
-        
-        label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: #1e293b; text-transform: uppercase; }
-        input[type="number"], input[type="file"] { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 16px; background: #fff; }
-        
-        .btn-finalizar { background: #2563eb; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
-        .empty { text-align: center; color: #94a3b8; margin-top: 50px; font-weight: bold; }
+        body { font-family: sans-serif; background: #f8fafc; padding: 15px; }
+        .card-os { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .info-acesso { background: #f1f5f9; padding: 8px; border-radius: 6px; font-size: 14px; margin: 10px 0; border: 1px solid #e2e8f0; }
+        .btn-acao { background: #10b981; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <h2 style="font-size: 1.3rem; margin: 0; color: #0f172a;">🛠️ Meus Serviços</h2>
-        <button onclick="carregarChamados()" style="padding: 10px; border-radius: 50%; border: 1px solid #cbd5e1; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">🔄</button>
-    </div>
-
-    <div id="lista-chamados">
-        <p class="empty">Buscando serviços ativos...</p>
-    </div>
+    <h2>🛠️ Meus Serviços</h2>
+    <div id="lista-chamados"></div>
 
     <script>
-        const SB_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
-        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
-        const sb = supabase.createClient(SB_URL, SB_KEY);
+        const sb = supabase.createClient('https://olawjagrfhcxsonmyopi.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY');
 
-        async function carregarChamados() {
+        async function carregar() {
+            const { data } = await sb.from('ordens_servico').select('*').neq('status', 'Concluido');
             const container = document.getElementById('lista-chamados');
-            
-            const { data, error } = await sb
-                .from('ordens_servico')
-                .select('*')
-                .or('status.eq.Pendente,status.eq.Em Andamento')
-                .order('id', { ascending: false });
-
-            if (!data || data.length === 0) {
-                container.innerHTML = '<p class="empty">Nenhum serviço pendente! ✅</p>';
-                return;
-            }
-
             container.innerHTML = '';
             data.forEach(os => {
-                const temHospede = os.observacoes === 'SIM';
-                const jaIniciado = os.status === 'Em Andamento';
-
                 container.innerHTML += `
-                    <div class="card-os" style="border-left-color: ${jaIniciado ? '#2563eb' : '#10b981'}">
-                        <h3>📍 ${os.cliente}</h3>
-                        <span class="info-endereco">🏢 ${os.unidade || 'Endereço não informado'}</span>
-                        
-                        <div class="info-acesso">
-                            <strong>🔑 ACESSO:</strong> ${os.contato || 'Não informado'}
-                        </div>
-
-                        <p class="info-servico"><strong>📝 SERVIÇO:</strong><br>${os.descricao_servico}</p>
-                        
-                        ${temHospede ? `<div class="alerta-hospede">⚠️ HÓSPEDE NO LOCAL - CUIDADO</div>` : ''}
-
-                        <button class="btn-iniciar" 
-                                id="btn-ini-${os.id}" 
-                                onclick="iniciarServico(${os.id})"
-                                style="display: ${jaIniciado ? 'none' : 'block'}">
-                            ▶️ INICIAR TRABALHO
-                        </button>
-                        
-                        <div id="box-${os.id}" class="secao-fechamento" style="display: ${jaIniciado ? 'block' : 'none'}">
-                            <label>Mão de Obra (R$):</label>
-                            <input type="number" id="mo-${os.id}" placeholder="0.00" step="0.01">
-                            
-                            <label>Materiais Gastos (R$):</label>
-                            <input type="number" id="mat-${os.id}" placeholder="0.00" step="0.01">
-                            
-                            <label>Foto da Nota ou Serviço:</label>
-                            <input type="file" id="foto-${os.id}" accept="image/*" capture="camera">
-                            
-                            <button class="btn-finalizar" onclick="concluirServico(${os.id})">✅ FINALIZAR E ENVIAR</button>
-                        </div>
-                    </div>
-                `;
+                    <div class="card-os">
+                        <h3>📍 Apto: ${os.apto}</h3>
+                        <p>🏢 <b>Edifício:</b> ${os.endereco_con}</p>
+                        <p>📝 <b>Serviço:</b> ${os.descricao_serv}</p>
+                        <div class="info-acesso"><b>🔑 ACESSO:</b> ${os.senha_porta}</div>
+                        <p>👤 <b>Hóspede no local?</b> ${os.hospede_no_a}</p>
+                        <button class="btn-acao" onclick="iniciar(${os.id})">INICIAR SERVIÇO</button>
+                    </div>`;
             });
         }
-
-        async function iniciarServico(id) {
-            const { error } = await sb
-                .from('ordens_servico')
-                .update({ status: 'Em Andamento' })
-                .eq('id', id);
-
-            if (!error) {
-                document.getElementById(`btn-ini-${id}`).style.display = 'none';
-                document.getElementById(`box-${id}`).style.display = 'block';
-            }
-        }
-
-        async function concluirServico(id) {
-            const mo = document.getElementById(`mo-${id}`).value;
-            const mat = document.getElementById(`mat-${id}`).value;
-            const fotoInput = document.getElementById(`foto-${id}`);
-
-            if (!mo) { alert("Informe o valor da mão de obra!"); return; }
-
-            let fotoBase64 = "";
-            if (fotoInput.files.length > 0) {
-                const reader = new FileReader();
-                fotoBase64 = await new Promise(res => {
-                    reader.readAsDataURL(fotoInput.files[0]);
-                    reader.onload = () => res(reader.result);
-                });
-            }
-
-            const { error } = await sb
-                .from('ordens_servico')
-                .update({
-                    status: 'Concluido',
-                    valor_mao_de_obra: parseFloat(mo),
-                    valor_gasto: parseFloat(mat || 0),
-                    foto_nf: fotoBase64,
-                    hora_conclusao: new Date().toISOString()
-                })
-                .eq('id', id);
-
-            if (!error) {
-                alert("Serviço concluído com sucesso!");
-                carregarChamados();
-            }
-        }
-
-        carregarChamados();
+        carregar();
     </script>
 </body>
 </html>
