@@ -3,75 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Super Host Brasil</title>
+    <title>Login - JC Motores</title>
     <link rel="stylesheet" href="./loguim.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div class="background-logo">
-        <img src="./logo_superhost.png" alt="Background Logo">
-    </div>
+
+    <div class="bg-glow"></div>
+    <div class="top-bar"></div>
 
     <div class="login-card">
-        <h2>ÁREA DE ACESSO</h2>
+        <div class="card-top-line"></div>
+
+        <div class="brand">
+            <div class="brand-icon">
+                <div class="brand-icon-conic"></div>
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="18" cy="18" r="16" stroke="#333" stroke-width="1.5"/>
+                    <path d="M10 14 L10 22 M10 14 Q10 11 13 11 L14 11 Q17 11 17 14 L17 18 Q17 21 14 21 L13 21 Q10 21 10 18"
+                          stroke="#1a3aff" stroke-width="2" stroke-linecap="round" fill="none"/>
+                    <path d="M21 11 L26 11 M21 11 L21 22 M21 22 L26 22 M21 16.5 L25 16.5"
+                          stroke="#cc0000" stroke-width="2" stroke-linecap="round" fill="none"/>
+                </svg>
+            </div>
+            <p class="brand-city">PRESIDENTE PRUDENTE - SP</p>
+            <h1 class="brand-name">JC <span>MOTORES</span></h1>
+            <p class="brand-sub">Sistema de Gerenciamento</p>
+        </div>
+
         <div class="input-group">
             <label>Usuário</label>
-            <input type="text" id="user" placeholder="Digite seu usuário">
+            <div class="input-wrap">
+                <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <input type="text" id="user" placeholder="seu.usuario"
+                       autocomplete="username" data-focus="blue"/>
+            </div>
         </div>
+
         <div class="input-group">
             <label>Senha</label>
-            <input type="password" id="pass" placeholder="Digite sua senha">
+            <div class="input-wrap">
+                <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <input type="password" id="pass" placeholder="••••••••"
+                       autocomplete="current-password" data-focus="red"/>
+            </div>
         </div>
-        <button onclick="tentarLogin()">ENTRAR NO SISTEMA</button>
-        <p class="footer-text">Desenvolvido por PROGGABS</p>
+
+        <button id="btn-entrar" onclick="tentarLogin()">
+            <span class="btn-text">Entrar</span>
+            <span class="btn-loader" style="display:none">Aguarde...</span>
+        </button>
+
+        <p class="forgot-link">Esqueci minha senha</p>
+
+        <div class="card-bottom-line"></div>
     </div>
+
+    <p class="footer-stars">★ ★ ★</p>
 
     <script>
         const SUPABASE_URL = 'https://olawjagrfhcxsonmyopi.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY';
-        
-        // Inicializa o cliente Supabase
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Limpa sessões antigas ao carregar a página
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         localStorage.removeItem('usuarioLogado');
+
+        // Focus colorido por campo
+        document.querySelectorAll('input[data-focus]').forEach(input => {
+            input.addEventListener('focus', () => {
+                const color = input.dataset.focus === 'blue'
+                    ? { border: '#1a3aff55', shadow: 'rgba(26,58,255,0.12)' }
+                    : { border: '#cc000055', shadow: 'rgba(204,0,0,0.12)' };
+                input.style.borderColor = color.border;
+                input.style.boxShadow = `0 0 0 3px ${color.shadow}`;
+            });
+            input.addEventListener('blur', () => {
+                input.style.borderColor = '';
+                input.style.boxShadow = '';
+            });
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter') tentarLogin();
+        });
 
         async function tentarLogin() {
             const userField = document.getElementById('user').value.trim();
             const passField = document.getElementById('pass').value.trim();
+            const btn = document.getElementById('btn-entrar');
 
             if (!userField || !passField) {
-                alert("Preencha todos os campos!");
+                shakeCard();
                 return;
             }
+
+            btn.disabled = true;
+            btn.querySelector('.btn-text').style.display = 'none';
+            btn.querySelector('.btn-loader').style.display = 'inline';
 
             try {
                 const { data, error } = await _supabase
                     .from('colaboradores')
                     .select('*')
-                    .eq('loguim', userField) 
+                    .eq('loguim', userField)
                     .eq('senha', passField)
                     .eq('ativo', true)
                     .single();
 
                 if (error || !data) {
-                    alert("Usuário ou senha incorretos!");
+                    shakeCard();
+                    btn.disabled = false;
+                    btn.querySelector('.btn-text').style.display = 'inline';
+                    btn.querySelector('.btn-loader').style.display = 'none';
                     return;
                 }
 
                 localStorage.setItem('usuarioLogado', JSON.stringify({
                     nome: data.nome,
                     loguim: data.loguim,
-                    empresa: data.empresa 
+                    empresa: data.empresa
                 }));
 
-                // Redireciona para o portal
                 window.location.href = './00_Portal/portal.html';
 
             } catch (err) {
-                console.error("Erro no login:", err);
-                alert("Erro ao conectar com o servidor.");
+                console.error('Erro no login:', err);
+                btn.disabled = false;
+                btn.querySelector('.btn-text').style.display = 'inline';
+                btn.querySelector('.btn-loader').style.display = 'none';
             }
+        }
+
+        function shakeCard() {
+            const card = document.querySelector('.login-card');
+            card.classList.add('shake');
+            setTimeout(() => card.classList.remove('shake'), 500);
         }
     </script>
 </body>

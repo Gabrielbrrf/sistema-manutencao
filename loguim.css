@@ -1,147 +1,240 @@
-/* loguim.css - Identidade Visual Super Host Brasil */
+/* loguim.css — JC Motores Dark System */
 
-* {
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&display=swap');
+
+*, *::before, *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* ── Fundo ────────────────────────────────────────── */
 body {
-    height: 100vh;
+    min-height: 100vh;
     width: 100vw;
+    background: #0a0a0a;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle, #8c6239 0%, #4d3326 100%);
+    font-family: 'Barlow', 'Segoe UI', sans-serif;
     overflow: hidden;
     position: relative;
 }
 
-/* --- LOGO GIGANTE AO FUNDO --- */
-.background-logo {
+/* Glows laterais azul / vermelho */
+.bg-glow {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 0; 
-    opacity: 0.35; /* Aumentei para a logo brilhar mais já que o card sumiu */
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(26,58,255,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 50%, rgba(204,0,0,0.07) 0%, transparent 60%);
     pointer-events: none;
 }
 
-.background-logo img {
-    min-width: 1200px; 
-    width: 80vw;
-    height: auto;
-    filter: brightness(0.8) contrast(1.5); 
-}
-
-/* --- CARD TOTALMENTE TRANSPARENTE --- */
-.login-card {
-    position: relative;
+/* Barra horizontal topo da página */
+.top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #1a3aff, #cc0000, #1a3aff);
+    opacity: 0.7;
     z-index: 10;
-    
-    /* REMOVIDO: background e blur para transparência total */
-    background: transparent; 
-    backdrop-filter: none; 
-    -webkit-backdrop-filter: none;
-    
-    padding: 60px 45px;
-    border-radius: 30px;
-    
-    /* Apenas uma borda muito sutil para dar elegância */
-    border: 1px solid rgba(255, 255, 255, 0.1); 
-    
-    /* Sombra removida para não "sujar" a logo ao fundo */
-    box-shadow: none; 
-    
-    width: 90%;
-    max-width: 420px;
+}
+
+/* ── Card ─────────────────────────────────────────── */
+.login-card {
+    width: 360px;
+    background: #111111;
+    border: 1px solid #222;
+    border-radius: 16px;
+    padding: 40px 36px;
+    position: relative;
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.9);
+    animation: fadeUp 0.5s ease-out;
+}
+
+.card-top-line {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #1a3aff44, #cc000044, transparent);
+    border-radius: 16px 16px 0 0;
+}
+
+.card-bottom-line {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #cc000033, transparent);
+    border-radius: 0 0 16px 16px;
+}
+
+/* ── Brand / Logo ─────────────────────────────────── */
+.brand {
     text-align: center;
-    animation: fadeIn 0.8s ease-out;
+    margin-bottom: 32px;
 }
 
-h2 {
-    color: #ffffff;
-    margin-bottom: 40px;
-    font-weight: 300;
+.brand-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    background: #0d0d0d;
+    border-radius: 50%;
+    border: 2px solid #1e1e1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.brand-icon-conic {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #1a3aff22, #cc000022, #1a3aff22);
+}
+
+.brand-city {
+    color: #666;
+    font-size: 11px;
     letter-spacing: 3px;
-    font-size: 1.4rem;
     text-transform: uppercase;
-    /* Sombra mais forte no texto para destacar sobre a logo */
-    text-shadow: 2px 2px 10px rgba(0,0,0,0.5); 
+    margin-bottom: 4px;
 }
 
+.brand-name {
+    font-family: 'Bebas Neue', 'Segoe UI', sans-serif;
+    color: #e8e8e8;
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: 3px;
+    line-height: 1;
+}
+
+.brand-name span {
+    color: #cc0000;
+}
+
+.brand-sub {
+    color: #555;
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+/* ── Inputs ───────────────────────────────────────── */
 .input-group {
-    margin-bottom: 25px;
-    text-align: left;
+    margin-bottom: 18px;
 }
 
 .input-group label {
-    color: #ffffff;
-    font-size: 11px;
-    margin-left: 10px;
-    margin-bottom: 5px;
     display: block;
+    font-size: 11px;
+    color: #666;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
-    font-weight: bold;
-    text-shadow: 1px 1px 5px rgba(0,0,0,0.5);
+    margin-bottom: 8px;
 }
 
-input {
+.input-wrap {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #444;
+    pointer-events: none;
+}
+
+.input-wrap input {
     width: 100%;
-    padding: 15px 20px;
-    border-radius: 50px;
-    border: none;
-    background: rgba(255, 255, 255, 0.95); /* Quase branco sólido para leitura */
+    background: #0d0d0d;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 11px 12px 11px 38px;
+    color: #d0d0d0;
+    font-size: 14px;
+    font-family: inherit;
     outline: none;
-    font-size: 16px;
-    color: #333;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-input:focus {
-    background: #ffffff;
-    transform: scale(1.02);
+.input-wrap input::placeholder {
+    color: #3a3a3a;
 }
 
+/* ── Botão ────────────────────────────────────────── */
 button {
     width: 100%;
-    padding: 16px;
-    margin-top: 15px;
+    margin-top: 10px;
+    padding: 13px;
+    background: linear-gradient(135deg, #1a2ebb, #cc0000);
     border: none;
-    border-radius: 50px;
-    background: linear-gradient(135deg, #a67c52 0%, #4d3326 100%);
-    color: #ffffff;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 17px;
+    letter-spacing: 2.5px;
     cursor: pointer;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-    transition: 0.3s;
+    transition: opacity 0.2s, transform 0.15s;
 }
 
 button:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.1);
+    opacity: 0.88;
 }
 
-.footer-text {
-    margin-top: 35px;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+button:active {
+    transform: scale(0.97);
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Links / Footer ───────────────────────────────── */
+.forgot-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 12px;
+    color: #444;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.forgot-link:hover {
+    color: #1a3aff;
+}
+
+.footer-stars {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #333;
+    font-size: 11px;
+    letter-spacing: 4px;
+}
+
+/* ── Animações ────────────────────────────────────── */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-8px); }
+    40%       { transform: translateX(8px); }
+    60%       { transform: translateX(-5px); }
+    80%       { transform: translateX(5px); }
+}
+
+.login-card.shake {
+    animation: shake 0.45s ease;
 }
