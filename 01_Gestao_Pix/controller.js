@@ -1,19 +1,20 @@
-/* controller.js - Integrado com a View de Cidades */
-import { View } from './view.js'; // Importa a lógica dos botões
+/* controller.js */
+import { View } from './view.js';
 
 const btnTabLista = document.getElementById('btn-tab-lista');
 const btnTabCadastro = document.getElementById('btn-tab-cadastro');
 const btnSalvar = document.getElementById('btn-salvar');
 const inputBusca = document.getElementById('inputBusca');
 
-// --- NAVEGAÇÃO ---
+// Carregar ao iniciar
+document.addEventListener('DOMContentLoaded', carregarListaDoBanco);
+
 btnTabLista.onclick = async () => {
     document.getElementById('aba-lista').classList.remove('hidden');
     document.getElementById('aba-cadastro').classList.add('hidden');
     btnTabLista.classList.add('active');
     btnTabCadastro.classList.remove('active');
-    
-    limparFormulario();
+    View.limparFormulario();
     await carregarListaDoBanco(); 
 };
 
@@ -24,19 +25,15 @@ btnTabCadastro.onclick = () => {
     btnTabCadastro.classList.add('active');
 };
 
-// --- BUSCA EM TEMPO REAL ---
 inputBusca.onkeyup = async () => {
     const termo = inputBusca.value.toLowerCase();
     const { data } = await _supabase
         .from('contatos')
         .select('*')
         .ilike('nome', `%${termo}%`); 
-    
-    // USANDO A VIEW PARA RENDERIZAR
     View.renderizarLista(data || []);
 };
 
-// --- SALVAR OU ATUALIZAR ---
 btnSalvar.onclick = async () => {
     const inputNome = document.getElementById('reg-nome');
     const idEditando = inputNome.getAttribute('data-id-editando');
@@ -46,7 +43,7 @@ btnSalvar.onclick = async () => {
         chave_pix: document.getElementById('reg-pix').value.trim(),
         telefone: document.getElementById('reg-tel').value.trim(),
         banco: document.getElementById('reg-banco').value.trim(),
-        cidade: document.getElementById('reg-cidade').value, // Faltava a cidade aqui!
+        cidade: document.getElementById('reg-cidade').value, 
         categoria: document.getElementById('reg-categoria').value
     };
 
@@ -54,44 +51,32 @@ btnSalvar.onclick = async () => {
         btnSalvar.disabled = true;
         btnSalvar.innerText = "Processando...";
 
-        if (idEditando) {
-            const { error } = await _supabase
-                .from('contatos')
-                .update(dados)
-                .eq('id', idEditando);
-            if (!error) alert("Dados atualizados!");
-        } else {
-            const { error } = await _supabase
-                .from('contatos')
-                .insert([dados]);
-            if (!error) alert("Cadastrado com sucesso!");
-        }
+        const { error } = idEditando 
+            ? await _supabase.from('contatos').update(dados).eq('id', idEditando)
+            : await _supabase.from('contatos').insert([dados]);
 
-        limparFormulario();
-        btnTabLista.click(); 
+        if (!error) {
+            alert(idEditando ? "Atualizado!" : "Cadastrado!");
+            View.limparFormulario();
+            btnTabLista.click(); 
+        } else {
+            alert("Erro ao salvar.");
+        }
     } else {
         alert("Preencha Nome e PIX!");
     }
     btnSalvar.disabled = false;
 };
 
-// --- FUNÇÃO PRINCIPAL ---
 async function carregarListaDoBanco() {
     const { data, error } = await _supabase
         .from('contatos')
         .select('*')
         .order('nome', { ascending: true });
     
-    if (error) {
-        console.error("Erro ao carregar:", error);
-        return;
-    }
-
-    // AQUI ESTÁ O SEGREDO: Mandar para a View organizar as cidades
-    View.renderizarLista(data || []);
+    if (!error) View.renderizarLista(data || []);
 }
 
-// --- FUNÇÕES GLOBAIS ---
 window.editarColab = async (id) => {
     const { data } = await _supabase.from('contatos').select('*').eq('id', id).single();
     if (!data) return;
@@ -110,15 +95,8 @@ window.editarColab = async (id) => {
 };
 
 window.excluirColab = async (id, nome) => {
-    if (confirm(`Deseja realmente remover ${nome}?`)) {
+    if (confirm(`Deseja remover ${nome}?`)) {
         const { error } = await _supabase.from('contatos').delete().eq('id', id);
         if (!error) carregarListaDoBanco();
     }
 };
-
-function limparFormulario() {
-    View.limparFormulario(); // Usa a limpeza que já está na View
-}
-
-// Inicializa a lista ao abrir
-carregarListaDoBanco();
