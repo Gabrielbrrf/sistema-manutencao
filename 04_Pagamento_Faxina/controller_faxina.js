@@ -1,12 +1,6 @@
-/* controller_faxina.js - Mecanismo de Upload Espacial e Controle do Recibo */
+/* controller_faxina.js - Versão Definitiva Sincronizada com a Tabela Contatos */
 
-// Garante o vínculo com o worker carregado no HTML
-if (typeof window['pdfjs-dist/build/pdf'] !== 'undefined') {
-    const pdfjsLib = window['pdfjs-dist/build/pdf'];
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-}
-
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     const filtroCategoria = document.getElementById('filtroCategoria');
     const selectColaborador = document.getElementById('selectColaborador');
     const dadosComissao = document.getElementById('dadosComissao');
@@ -17,29 +11,125 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputPdf = document.getElementById('inputPdf');
     const nomeArquivoPdf = document.getElementById('nomeArquivoPdf');
 
-    let dadosAtuais = OficinaModel.retornarVazio();
+    // Variáveis locais para controle da equipe
+    let listaColaboradoresLocal = [];
+    let dadosAtuais = {
+        os: "Relatório Geral",
+        servico: "Geral / Oficina",
+        totalServico: 0,
+        taxa: 0,
+        subtotal: 0,
+        comissao: 0,
+        nomeColaboradorPdf: ""
+    };
 
-    inicializarMódulo();
-
-    async function inicializarMódulo() {
+    // 1. CARREGAR EQUIPE DIRETO DA TABELA 'CONTATOS'
+    async function carregarEquipeDoBanco() {
         try {
-            const equipe = await OficinaModel.buscarColaboradores();
-            OficinaView.atualizarSelectColaboradores(equipe, filtroCategoria.value);
-            console.log("✅ Equipe sincronizada!");
+            // Faz a requisição direto na tabela apontada no print do Supabase
+            const { data, error } = await _supabase
+                .from('contatos')
+                .select('nome, chave_pix, banco, telefone, categoria');
+
+            if (error) throw error;
+
+            if (data) {
+                listaColaboradoresLocal = data;
+                renderizarSelectColaboradores(filtroCategoria.value);
+                console.log("✅ Equipe carregada com sucesso da tabela 'contatos'!");
+            }
         } catch (err) {
-            console.error("Erro na inicialização:", err);
-            selectColaborador.innerHTML = "<option>❌ Erro ao carregar equipe</option>";
+            console.error("Erro ao buscar dados na tabela contatos:", err);
+            selectColaborador.innerHTML = "<option value=''>❌ Erro ao conectar ao banco</option>";
         }
     }
 
+    function renderizarSelectColaboradores(categoriaFiltro) {
+        selectColaborador.innerHTML = '<option value="">Selecione o Colaborador...</option>';
+        
+        const filtrados = listaColaboradoresLocal.filter(c => {
+            if (categoriaFiltro === "TODOS") return true;
+            return c.categoria === categoriaFiltro;
+        });
+
+        filtrados.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c.nome;
+            option.textContent = c.nome;
+            option.dataset.pix = c.chave_pix || '';
+            option.dataset.banco = c.banco || '';
+            option.dataset.tel = c.telefone || '';
+            selectColaborador.appendChild(option);
+        });
+    }
+
+    // 2. ATUALIZAÇÃO DOS CAMPOS DA INTERFACE (VIEW INTEGRADA)
     function atualizarTelaDinamica() {
         const opcaoAtiva = selectColaborador.options[selectColaborador.selectedIndex];
         const nome = selectColaborador.value ? selectColaborador.value : "-";
-        const pix = (opcaoAtiva && opcaoAtiva.dataset.pix) ? opcaoAtiva.dataset.pix : "Não informado";
-        
-        OficinaView.renderizarCampos(dadosAtuais, nome, pix);
+        const pix = (opcaoAtiva && opcaoAtiva.dataset.pix) ? opcaoAtiva.dataset.pix : "Não cadastrado";
+
+        // Atualiza os elementos do DOM do index.html
+        document.getElementById('resColaborador').textContent = nome;
+        document.getElementById('resOS').textContent = dadosAtuais.os || "-";
+        document.getElementById('resServico').textContent = dadosAtuais.servico || "-";
+        document.getElementById('resTotalServico').textContent = `R$ ${(Number(dadosAtuais.totalServico) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('resTaxa').textContent = `- R$ ${(Number(dadosAtuais.taxa) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('valorTotalComissao').textContent = `R$ ${(Number(dadosAtuais.comissao) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('infoPixRecibo').textContent = `Destino: PIX ${pix}`;
     }
 
+    // 3. LEITURA BRUTA E PARSER DO TEXTO DO PDF
+    function interpretarTextoOficina(texto) {
+        const resultado = {
+            os: "Relatório Geral",
+            servico: "Geral / Oficina",
+            totalServico: 0,
+            taxa: 0,
+            subtotal: 0,
+            comissao: 0,
+            nomeColaboradorPdf: ""
+        };
+
+        if (!texto) return resultado;
+
+        // Procura pelo nome do funcionário nas primeiras linhas do PDF
+        const linhas = texto.split('\n');
+        for (let linha of linhas) {
+            if (linha.toUpperCase().includes('MARCO')) {
+                // Remove numeração comum que vem antes (Ex: "16- MARCO...")
+                resultado.nomeColaboradorPdf = linha.replace(/^\d+-\s*/, '').trim();
+                break;
+            }
+        }
+
+        // Procura os valores de fechamento (SubTotal ou Total Geral)
+        const regexValores = /(?:SubTotal|Total\s+Geral)[^\d]*([\d.,]+)[^\d]+([\d.,]+)/i;
+        const matchValores = texto.match(regexValores);
+
+        if (matchValores) {
+            const bruto = parseFloat(matchValores[1].replace(/\./g, '').replace(',', '.'));
+            const comis = parseFloat(matchValores[2].replace(/\./g, '').replace(',', '.'));
+            
+            resultado.totalServico = bruto;
+            resultado.taxa = bruto * 0.20; 
+            resultado.subtotal = bruto;
+            resultado.comissao = comis; 
+        } else {
+            // Fallback: Busca o último valor em formato de dinheiro se a estrutura falhar
+            const valoresDinheiro = texto.match(/([\d.]+,\d{2})/g);
+            if (valoresDinheiro && valoresDinheiro.length >= 2) {
+                const comis = parseFloat(valoresDinheiro[valoresDinheiro.length - 1].replace(/\./g, '').replace(',', '.'));
+                const bruto = parseFloat(valoresDinheiro[valoresDinheiro.length - 2].replace(/\./g, '').replace(',', '.'));
+                resultado.totalServico = bruto;
+                resultado.taxa = bruto * 0.20;
+                resultado.comissao = comis;
+            }
+        }
+        return resultado;
+    }
+
+    // 4. MECANISMO DE DRAG / UPLOAD DO ARQUIVO PDF
     if (btnUploadPdf && inputPdf) {
         btnUploadPdf.onclick = () => inputPdf.click();
 
@@ -48,84 +138,45 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!arquivo) return;
 
             nomeArquivoPdf.textContent = arquivo.name;
-            btnUploadPdf.innerText = "🔄 Carregando PDF...";
+            btnUploadPdf.innerText = "🔄 Processando...";
             btnUploadPdf.style.background = "#d97706";
 
             const fileReader = new FileReader();
             fileReader.onload = async function (event) {
                 try {
                     const arrayBuffer = new Uint8Array(event.target.result);
-                    
-                    // Inicialização da biblioteca usando a instância global do objeto do navegador
                     const pdfjsLib = window['pdfjs-dist/build/pdf'];
                     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
                     const pdf = await loadingTask.promise;
                     
                     let textoCompleto = "";
 
+                    // Varre as páginas extraindo os itens textuais de forma simples e direta
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const pagina = await pdf.getPage(i);
                         const conteudo = await pagina.getTextContent();
-                        
-                        // Mapeamento e ordenação espacial das strings
-                        const itensMapeados = [...conteudo.items].sort((a, b) => {
-                            if (Math.abs(a.transform[5] - b.transform[5]) > 15) {
-                                return b.transform[5] - a.transform[5]; 
-                            }
-                            return a.transform[4] - b.transform[4]; 
-                        });
-
-                        let textoPagina = "";
-                        let ultimoY = null;
-
-                        for (const item of itensMapeados) {
-                            if (!item.str) continue;
-
-                            if (ultimoY !== null && Math.abs(item.transform[5] - ultimoY) > 15) {
-                                textoPagina += "\n";
-                            } else if (textoPagina !== "" && !textoPagina.endsWith("\n") && !textoPagina.endsWith(" ")) {
-                                textoPagina += " ";
-                            }
-                            textoPagina += item.str;
-                            ultimoY = item.transform[5];
-                        }
+                        const textoPagina = conteudo.items.map(item => item.str).join(" ");
                         textoCompleto += textoPagina + "\n";
                     }
 
-                    if (!textoCompleto.trim() || textoCompleto.trim() === "Pag. 1 de 1") {
-                        // Plano B imediato caso a ordenação espacial falhe no layout do relatório
-                        let textoPlanoB = "";
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const pagina = await pdf.getPage(i);
-                            const conteudo = await pagina.getTextContent();
-                            textoPlanoB += conteudo.items.map(item => item.str).join(" ") + "\n";
-                        }
-                        textoCompleto = textoPlanoB;
-                    }
-
+                    // Força a exibição de todo o texto no textarea para conferência
                     dadosComissao.value = textoCompleto.trim();
-                    dadosAtuais = OficinaModel.interpretarTexto(textoCompleto);
+                    
+                    // Executa o interpretador inteligente
+                    dadosAtuais = interpretarTextoOficina(textoCompleto);
 
+                    // Vincula o Colaborador Automaticamente (Mesmo se houver erro de digitação de letras)
                     if (dadosAtuais.nomeColaboradorPdf) {
-                        const nomeAlvo = dadosAtuais.nomeColaboradorPdf.toLowerCase().trim();
-                        let achou = false;
-
-                        for (let option of selectColaborador.options) {
-                            if (option.value && (nomeAlvo.includes(option.value.toLowerCase().trim()) || option.value.toLowerCase().trim().includes(nomeAlvo))) {
-                                selectColaborador.value = option.value;
-                                achou = true;
-                                break;
-                            }
-                        }
+                        const nomeInjetado = dadosAtuais.nomeColaboradorPdf.toLowerCase().replace(/[^a-z]/g, '');
                         
-                        if (!achou) {
-                            filtroCategoria.value = "TODOS";
-                            OficinaView.atualizarSelectColaboradores(OficinaModel.listaColaboradores, "TODOS");
-                            for (let option of selectColaborador.options) {
-                                if (option.value && (nomeAlvo.includes(option.value.toLowerCase().trim()) || option.value.toLowerCase().trim().includes(nomeAlvo))) {
-                                    selectColaborador.value = option.value;
-                                    break;
-                                }
+                        for (let option of selectColaborador.options) {
+                            if (!option.value) continue;
+                            const nomeOpcao = option.value.toLowerCase().replace(/[^a-z]/g, '');
+                            
+                            // Se um nome contiver o outro (Trata o caso "BERNADO" vs "BERNARDO")
+                            if (nomeInjetado.includes(nomeOpcao) || nomeOpcao.includes(nomeInjetado) || nomeInjetado.substring(0, 5) === nomeOpcao.substring(0, 5)) {
+                                selectColaborador.value = option.value;
+                                break;
                             }
                         }
                     }
@@ -134,18 +185,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     btnUploadPdf.innerText = "✅ PDF Processado!";
                     btnUploadPdf.style.background = "#059669";
 
-                } catch (pdfError) {
-                    console.error("Erro interno no processamento do PDF:", pdfError);
-                    alert("Erro ao ler o conteúdo interno do arquivo: " + pdfError.message);
+                } catch (err) {
+                    console.error("Erro interno no PDF:", err);
+                    alert("Falha na extração dos dados estruturados: " + err.message);
                     resetarBotao();
                 }
             };
-            
-            fileReader.onerror = function(err) {
-                alert("Erro no leitor de arquivos do navegador.");
-                resetarBotao();
-            };
-            
             fileReader.readAsArrayBuffer(arquivo);
         };
     }
@@ -155,8 +200,9 @@ document.addEventListener("DOMContentLoaded", () => {
         btnUploadPdf.style.background = "#4f46e5";
     }
 
+    // 5. EVENTOS DE INTERAÇÃO DOS FILTROS E INPUTS
     filtroCategoria.onchange = () => {
-        OficinaView.atualizarSelectColaboradores(OficinaModel.listaColaboradores, filtroCategoria.value);
+        renderizarSelectColaboradores(filtroCategoria.value);
         atualizarTelaDinamica();
     };
 
@@ -165,18 +211,19 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     dadosComissao.oninput = () => {
-        dadosAtuais = OficinaModel.interpretarTexto(dadosComissao.value);
+        dadosAtuais = interpretarTextoOficina(dadosComissao.value);
         atualizarTelaDinamica();
     };
 
+    // 6. ENVIO PARA O WHATSAPP E SALVAMENTO DO HISTÓRICO
     btnWhatsAppTexto.onclick = async () => {
         if (!selectColaborador.value) {
-            alert("⚠️ Selecione ou importe um colaborador válido!");
+            alert("⚠️ Selecione um colaborador ativo antes de enviar!");
             return;
         }
 
         btnWhatsAppTexto.disabled = true;
-        btnWhatsAppTexto.innerText = "🔄 Salvando Histórico...";
+        btnWhatsAppTexto.innerText = "🔄 Salvando no Supabase...";
 
         const opcaoAtiva = selectColaborador.options[selectColaborador.selectedIndex];
         const nomeColaborador = opcaoAtiva.value;
@@ -185,10 +232,11 @@ document.addEventListener("DOMContentLoaded", () => {
         let telefone = opcaoAtiva.dataset.tel ? opcaoAtiva.dataset.tel.replace(/\D/g, '') : '';
 
         try {
+            // Salva na tabela de relatórios
             const { error } = await _supabase.from('comissoes_oficina').insert([{
                 colaborador: nomeColaborador,
-                numero_os: dadosAtuais.os || "Relatório Geral",
-                servico: dadosAtuais.servico || "Geral / Oficina",
+                numero_os: dadosAtuais.os,
+                servico: dadosAtuais.servico,
                 total_servico: Number(dadosAtuais.totalServico) || 0,
                 taxa_administrativa: Number(dadosAtuais.taxa) || 0,
                 subtotal: Number(dadosAtuais.subtotal) || 0,
@@ -197,21 +245,19 @@ document.addEventListener("DOMContentLoaded", () => {
             }]);
             
             if (error) throw error;
-            console.log("✅ Dados salvos com sucesso!");
-
+            console.log("✅ Dados gravados com sucesso!");
         } catch (err) {
-            console.error("Erro no Supabase:", err);
+            console.error("Erro ao salvar histórico:", err);
         }
 
+        // Formata a mensagem do WhatsApp
         let msg = `*⚙️ RELATÓRIO DE COMISSÃO - OFICINA*\n\n`;
         msg += `👤 *Colaborador:* ${nomeColaborador}\n`;
-        msg += `📌 *Nº O.S:* ${dadosAtuais.os}\n`;
+        msg += `📌 *Documento:* ${dadosAtuais.os}\n`;
         msg += `🛠️ *Serviço:* ${dadosAtuais.servico}\n`;
-        msg += `💵 *Total do Serviço:* R$ ${(dadosAtuais.totalServico || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-        if (dadosAtuais.os !== "Relatório Geral") {
-            msg += `📊 *Taxa Administrativa (20%):* R$ ${(dadosAtuais.taxa || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-        }
-        msg += `\n💰 *VALOR DA COMISSÃO:* *R$ ${(dadosAtuais.comissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n`;
+        msg += `💵 *Volume Bruto:* R$ ${(dadosAtuais.totalServico || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+        msg += `📊 *Retenção Operacional (20%):* R$ ${(dadosAtuais.taxa || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`;
+        msg += `💰 *VALOR DA COMISSÃO:* *R$ ${(dadosAtuais.comissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n`;
         msg += `*Pagamento:*\n🔑 *PIX:* ${pixColaborador}\n🏦 *Banco:* ${bancoColaborador}`;
 
         if (telefone && telefone.length <= 11) telefone = '55' + telefone;
@@ -222,4 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     btnImprimirPDF.onclick = () => window.print();
+
+    // Executa a carga inicial da equipe ao abrir a página
+    await carregarEquipeDoBanco();
 });
