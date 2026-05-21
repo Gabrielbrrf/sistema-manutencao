@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputPdf = document.getElementById('inputPdf');
     const nomeArquivoPdf = document.getElementById('nomeArquivoPdf');
 
-    // Estado global da leitura ativa para permitir re-renderizações fluidas
+    // Estado global da leitura activa para permitir re-renderizações fluidas
     let dadosAtuais = OficinaModel.retornarVazio();
 
     inicializarMódulo();
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ===================================================
-    // RECONSTRUTOR DE MATRIZ TEXTUAL DO PDF (ALINHAMENTO Y/X)
+    // RECONSTRUTOR DE MATRIZ TEXTUAL DO PDF (ALINHAMENTO Y/X CORRIGIDO)
     // ===================================================
     if (btnUploadPdf && inputPdf) {
         btnUploadPdf.onclick = () => inputPdf.click();
@@ -67,9 +67,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             const pagina = await pdf.getPage(i);
                             const conteudo = await pagina.getTextContent();
                             
-                            // Ordenação geométrica por coordenadas (Y decrescente, X crescente)
+                            // Ordenação geométrica robusta por coordenadas (Y decrescente, X crescente)
                             const itensMapeados = [...conteudo.items].sort((a, b) => {
-                                if (Math.abs(a.transform[5] - b.transform[5]) > 4) {
+                                if (Math.abs(a.transform[5] - b.transform[5]) > 5) {
                                     return b.transform[5] - a.transform[5]; 
                                 }
                                 return a.transform[4] - b.transform[4]; 
@@ -79,9 +79,11 @@ document.addEventListener("DOMContentLoaded", () => {
                             let ultimoY = null;
 
                             for (const item of itensMapeados) {
-                                if (ultimoY !== null && Math.abs(item.transform[5] - ultimoY) > 4) {
+                                if (!item.str || item.str.trim() === "") continue;
+
+                                if (ultimoY !== null && Math.abs(item.transform[5] - ultimoY) > 5) {
                                     textoPagina += "\n";
-                                } else if (textoPagina !== "" && !textoPagina.endsWith("\n")) {
+                                } else if (textoPagina !== "" && !textoPagina.endsWith("\n") && !textoPagina.endsWith(" ")) {
                                     textoPagina += " ";
                                 }
                                 textoPagina += item.str;
@@ -90,12 +92,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             textoCompleto += textoPagina + "\n";
                         }
 
-                        dadosComissao.value = textoCompleto;
+                        // Define o valor bruto no textarea de visualização para auditoria
+                        dadosComissao.value = textoCompleto.trim();
 
                         // Processa a inteligência do Regex no Model
                         dadosAtuais = OficinaModel.interpretarTexto(textoCompleto);
 
-                        // MÁGICA DE AUTO-SELEÇÃO DO MECÂNICO
+                        // MÁGICA DE AUTO-SELEÇÃO DO MECÂNICO (Com verificação flexível de strings)
                         if (dadosAtuais.nomeColaboradorPdf) {
                             const nomeAlvo = dadosAtuais.nomeColaboradorPdf.toLowerCase().trim();
                             let achou = false;
@@ -164,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ===================================================
-    // SALVAMENTO NO SUPABASE E DISPARO WHATSAPP
+    // ARMAZENAMENTO HISTÓRICO NO SUPABASE E WHATSAPP
     // ===================================================
     btnWhatsAppTexto.onclick = async () => {
         if (!selectColaborador.value) {
@@ -173,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         btnWhatsAppTexto.disabled = true;
-        btnWhatsAppTexto.innerText = "🔄 Registrando...";
+        btnWhatsAppTexto.innerText = "🔄 Salvando Histórico...";
 
         const opcaoAtiva = selectColaborador.options[selectColaborador.selectedIndex];
         const nomeColaborador = opcaoAtiva.value;
@@ -181,8 +184,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const bancoColaborador = opcaoAtiva.dataset.banco || 'Não informado';
         let telefone = opcaoAtiva.dataset.tel ? opcaoAtiva.dataset.tel.replace(/\D/g, '') : '';
 
+        // Executa a gravação no Supabase para alimentar a futura tela de relatórios
         try {
-            await _supabase.from('comissoes_oficina').insert([{
+            const { data, error } = await _supabase.from('comissoes_oficina').insert([{
                 colaborador: nomeColaborador,
                 numero_os: dadosAtuais.os,
                 servico: dadosAtuais.servico,
@@ -192,10 +196,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 valor_comissao: dadosAtuais.comissao,
                 data_registro: new Date().toISOString()
             }]);
+            
+            if (error) throw error;
+            console.log("✅ Histórico registrado com sucesso para relatórios futuros!");
+
         } catch (err) {
-            console.error("Erro Supabase:", err);
+            console.error("Erro crítico ao persistir no Supabase:", err);
+            alert("⚠️ Atenção: Falha ao salvar no banco de dados. O WhatsApp abrirá mesmo assim.");
         }
 
+        // Constrói a mensagem para envio
         let msg = `*⚙️ RELATÓRIO DE COMISSÃO - OFICINA*\n\n`;
         msg += `👤 *Colaborador:* ${nomeColaborador}\n`;
         msg += `📌 *Nº O.S:* ${dadosAtuais.os}\n`;
