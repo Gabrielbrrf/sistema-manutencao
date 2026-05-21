@@ -18,25 +18,23 @@ const OficinaModel = {
         return this.listaColaboradores;
     },
 
-    // Lê o bloco de texto copiado e extrai cada campo dinamicamente
+    // Lê o bloco de texto copiado e extrai cada campo dinamicamente (Pronto para PDFs)
     interpretarTexto(texto) {
         if (!texto.trim()) {
             return this.retornarVazio();
         }
 
-        // Regex inteligentes para capturar os padrões do seu relatório
-        const osMatch = texto.match(/(?:OS|O\.S|Número|Nº)[\s:]*([0-9]+)/i);
-        const totalServicoMatch = texto.match(/(?:Total do Serviço|Total Serviço|Serviço)[\s:]*R?\$?\s*([0-9.,]+)/i);
-        const taxaMatch = texto.match(/(?:20%|Taxa)[\s:]*R?\$?\s*([0-9.,]+)/i);
-        const subtotalMatch = texto.match(/(?:Subtotal|Sub total|Total Geral)[\s:]*R?\$?\s*([0-9.,]+)/i);
-        const comissaoMatch = texto.match(/(?:Comissão|Comissao|A receber|Pagar)[\s:]*R?\$?\s*([0-9.,]+)/i);
+        // Roteador de Regex flexível: o "[\s\n:]*" aceita espaços, dois pontos e quebras de linha do PDF
+        const osMatch = texto.match(/(?:OS|O\.S|Número|Nº|N[oO]|Num)[\s\n:]*([0-9]+)/i);
+        const totalServicoMatch = texto.match(/(?:Total do Serviço|Total Serviço|Valor Serviço|Serviço)[\s\n:]*R?\$?\s*([0-9.,]+)/i);
+        const taxaMatch = texto.match(/(?:20%|Taxa|Desc\.?\s*20%)[\s\n:]*R?\$?\s*([0-9.,]+)/i);
+        const subtotalMatch = texto.match(/(?:Subtotal|Sub\s*total|Total Geral|Líquido|Valor Líquido)[\s\n:]*R?\$?\s*([0-9.,]+)/i);
+        const comissaoMatch = texto.match(/(?:Comissão|Comissao|A receber|Pagar|Valor Comissão)[\s\n:]*R?\$?\s*([0-9.,]+)/i);
         
-        // Tenta capturar datas/status simples
-        const prontoMatch = texto.match(/Pronto[\s:]*([^\n|]+)/i);
-        const saidaMatch = texto.match(/Saída[\s:]*([^\n|]+)/i);
-        
-        // Tenta capturar o nome do serviço (geralmente uma linha que sobrou ou descrição)
-        const servicoMatch = texto.match(/(?:Serviço|Desc|Descrição)[\s:]*([^\n]+)/i);
+        // Captura de Strings/Textos de status e descrição
+        const prontoMatch = texto.match(/Pronto[\s\n:]*([^\n|]+)/i);
+        const saidaMatch = texto.match(/(?:Saída|Saida)[\s\n:]*([^\n|]+)/i);
+        const servicoMatch = texto.match(/(?:Serviço|Desc|Descrição|Item|Obs)[\s\n:]*([^\n]+)/i);
 
         return {
             os: osMatch ? osMatch[1] : "Não identificada",
@@ -50,10 +48,12 @@ const OficinaModel = {
         };
     },
 
-    // Auxiliar para transformar "1.250,50" ou "150.00" em float utilizável
+    // Auxiliar robusto para transformar "1.250,50" ou "150.00" em float utilizável
     converteValor(stringValor) {
         if (!stringValor) return 0;
-        let limpo = stringValor.replace('.', '').replace(',', '.').trim();
+        
+        // Remove todos os pontos de milhar globais, troca a vírgula decimal por ponto e limpa espaços
+        let limpo = stringValor.replace(/\./g, '').replace(',', '.').trim();
         return parseFloat(limpo) || 0;
     },
 
