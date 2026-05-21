@@ -23,11 +23,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         nomeColaboradorPdf: ""
     };
 
-    function resetarBotao() {
-        btnUploadPdf.innerText = "📁 Escolher PDF da OS";
-        btnUploadPdf.style.background = "#4f46e5";
-    }
-
     // 1. CARREGAR EQUIPE DIRETO DA TABELA 'CONTATOS'
     async function carregarEquipeDoBanco() {
         try {
@@ -125,6 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!texto) return resultado;
 
         // 1. Localiza o nome do funcionário eliminando prefixos numéricos
+        const regexNome = /(?:Comissões do funcionário|funcionário).*?\n(?:.*?-\s*)?([A-ZÁÉÍÓÚÂÊÔ⚠️ ]+)/i;
         const linhas = texto.split('\n');
         for (let linha of linhas) {
             if (linha.toUpperCase().includes('MARCO') || linha.toUpperCase().includes('BERNARDO') || linha.toUpperCase().includes('BERNADO')) {
@@ -134,6 +130,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         // 2. Captura de valores baseada no padrão estruturado do fechamento do relatório (SubTotal / Total Geral)
+        // Esse regex captura os valores ignorando as aspas, espaços e vírgulas da tabela gerada pelo leitor
         const regexSubTotal = /SubTotal\s*["']?\s*,\s*["']?\s*([\d.]+,\d{2})\s*["']?\s*,\s*["']?\s*([\d.]+,\d{2})/i;
         const matchSub = texto.match(regexSubTotal);
 
@@ -142,11 +139,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             const comis = parseFloat(matchSub[2].replace(/\./g, '').replace(',', '.'));
             
             resultado.totalServico = bruto;
-            resultado.taxa = bruto - comis; 
+            resultado.taxa = bruto - comis; // Calcula a retenção real exata da diferença
             resultado.subtotal = bruto;
             resultado.comissao = comis;
         } else {
-            // Fallback robusto para buscar as duas últimas linhas financeiras
+            // Fallback robusto para buscar as duas últimas linhas financeiras caso o layout mude
             const valoresDinheiro = texto.match(/[\d.]+,\d{2}/g);
             if (valoresDinheiro && valoresDinheiro.length >= 2) {
                 const comis = parseFloat(valoresDinheiro[valoresDinheiro.length - 1].replace(/\./g, '').replace(',', '.'));
@@ -160,7 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return resultado;
     }
 
-    // 4. MECANISMO DE DRAG / UPLOAD E EXTRAÇÃO DO ARQUIVO PDF
+    // 4. MECANISMO DE DRAG / UPLOAD E EXTRAÇÃO ROBUSTA DO ARQUIVO PDF
     if (btnUploadPdf && inputPdf) {
         btnUploadPdf.onclick = () => inputPdf.click();
 
@@ -175,16 +172,32 @@ document.addEventListener("DOMContentLoaded", async () => {
             const fileReader = new FileReader();
             fileReader.onload = async function (event) {
                 try {
-                    const arrayBuffer = event.target.result;
+                    const arrayBuffer = new Uint8Array(event.target.result);
+                    
+                    // Configuração explícita do PDF.js
                     const pdfjsLib = window['pdfjs-dist/build/pdf'];
-                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                    const pdf = await loadingTask.promise;
                     
-                    // LÊ APENAS A ÚLTIMA PÁGINA PARA PERFORMANCE
-                    const pagina = await pdf.getPage(pdf.numPages);
-                    const conteudo = await pagina.getTextContent({ disableCombineTextItems: false });
-                    const textoLimpo = conteudo.items.map(item => item.str).join(" ");
-                    
+                    let textoCompleto = "";
+
+                    // Varre as páginas garantindo o fluxo assíncrono correto de cada item
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const pagina = await pdf.getPage(i);
+                        
+                        // O segredo está aqui: disableCombineTextItems false permite capturar o fluxo de colunas
+                        const conteudo = await pagina.getTextContent({ disableCombineTextItems: false });
+                        
+                        // Une os fragmentos mantendo um espaço simples entre colunas da tabela
+                        const textoPagina = conteudo.items.map(item => item.str).join(" ");
+                        textoCompleto += textoPagina + "\n";
+                    }
+
+                    // Limpa quebras sobressalentes e força a exibição real de TODO o texto no textarea
+                    const textoLimpo = textoCompleto.trim();
                     dadosComissao.value = textoLimpo;
+                    
+                    // Executa o interpretador inteligente sobre a massa de dados real
                     dadosAtuais = interpretarTextoOficina(textoLimpo);
 
                     // Vincula o Colaborador Automaticamente
@@ -196,7 +209,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             if (!option.value) continue;
                             const nomeOpcao = simplificar(option.value);
                             
-                            if (nomeInjetado.includes(nomeOpcao) || nomeOpcao.includes(nomeInjetado)) {
+                            if (nomeInjetado.includes(nomeOpcao) || nomeOpcao.includes(nomeInjetado) || nomeInjetado.substring(0, 6) === nomeOpcao.substring(0, 6)) {
                                 selectColaborador.value = option.value;
                                 break;
                             }
@@ -206,9 +219,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                     atualizarTelaDinamica();
                     btnUploadPdf.innerText = "✅ PDF Processado!";
                     btnUploadPdf.style.background = "#059669";
+
                 } catch (err) {
                     console.error("Erro interno no PDF:", err);
-                    alert("Falha na extração dos dados: " + err.message);
+                    alert("Falha na extração dos dados estruturados: " + err.message);
                     resetarBotao();
                 }
             };
@@ -263,7 +277,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.log("✅ Dados gravados com sucesso!");
         } catch (err) {
             console.error("Erro ao salvar histórico:", err);
-            alert("Erro ao salvar no banco!");
         }
 
         let msg = `*⚙️ RELATÓRIO DE COMISSÃO - OFICINA*\n\n`;
