@@ -1,4 +1,4 @@
-/* controller_faxina.js - Versão Definitiva Sincronizada com a Tabela Contatos */
+/* controller_faxina.js - Versão Definitiva Sincronizada e Corrigida */
 
 document.addEventListener("DOMContentLoaded", async () => {
     const filtroCategoria = document.getElementById('filtroCategoria');
@@ -26,7 +26,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 1. CARREGAR EQUIPE DIRETO DA TABELA 'CONTATOS'
     async function carregarEquipeDoBanco() {
         try {
-            // Faz a requisição direto na tabela apontada no print do Supabase
             const { data, error } = await _supabase
                 .from('contatos')
                 .select('nome, chave_pix, banco, telefone, categoria');
@@ -63,26 +62,53 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
-    // 2. ATUALIZAÇÃO DOS CAMPOS DA INTERFACE (VIEW INTEGRADA)
+    // 2. ATUALIZAÇÃO COMPATÍVEL COM AMBOS OS LAYOUTS DE TELA
     function atualizarTelaDinamica() {
         const opcaoAtiva = selectColaborador.options[selectColaborador.selectedIndex];
         const nome = selectColaborador.value ? selectColaborador.value : "-";
         const pix = (opcaoAtiva && opcaoAtiva.dataset.pix) ? opcaoAtiva.dataset.pix : "Não cadastrado";
 
-        // Atualiza os elementos do DOM do index.html
-        document.getElementById('resColaborador').textContent = nome;
-        document.getElementById('resOS').textContent = dadosAtuais.os || "-";
-        document.getElementById('resServico').textContent = dadosAtuais.servico || "-";
-        document.getElementById('resTotalServico').textContent = `R$ ${(Number(dadosAtuais.totalServico) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('resTaxa').textContent = `- R$ ${(Number(dadosAtuais.taxa) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('valorTotalComissao').textContent = `R$ ${(Number(dadosAtuais.comissao) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('infoPixRecibo').textContent = `Destino: PIX ${pix}`;
+        // Formatações de moeda amigáveis
+        const strTotal = `R$ ${(Number(dadosAtuais.totalServico) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        const strTaxa = `R$ ${(Number(dadosAtuais.taxa) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        const strComissao = `R$ ${(Number(dadosAtuais.comissao) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+        // Mapeamento dinâmico que atende tanto o primeiro layout quanto o demonstrativo detalhado
+        const mapeamentoCampos = {
+            'resColaborador': nome,
+            'resOS': dadosAtuais.os || "Relatório Mensal",
+            'resServico': dadosAtuais.servico || "Geral / Oficina",
+            'resTotalServico': strTotal,
+            'resTaxa': `- ${strTaxa}`,
+            'valorTotalComissao': strComissao,
+            'infoPixRecibo': `Destino: PIX ${pix}`,
+            
+            // Compatibilidade com IDs alternativos do layout de Demonstrativo de Repasse
+            'colaboradorBeneficiario': nome,
+            'documentoOS': dadosAtuais.os || "Relatório Mensal",
+            'descricaoServico': dadosAtuais.servico || "Geral / Oficina",
+            'volumeBruto': strTotal,
+            'retencaoOperacional': `- ${strTaxa}`,
+            'valorLiquidoComissao': strComissao
+        };
+
+        // Varre e atualiza apenas os elementos existentes no DOM da página atual
+        Object.entries(mapeamentoCampos).forEach(([id, valor]) => {
+            const elemento = document.getElementById(id);
+            if (elemento) {
+                if (elemento.tagName === "INPUT" || elemento.tagName === "TEXTAREA") {
+                    elemento.value = valor;
+                } else {
+                    elemento.textContent = valor;
+                }
+            }
+        });
     }
 
-    // 3. LEITURA BRUTA E PARSER DO TEXTO DO PDF
+    // 3. LEITURA REFORMULADA E PARSER INTELIGENTE DO TEXTO DO PDF
     function interpretarTextoOficina(texto) {
         const resultado = {
-            os: "Relatório Geral",
+            os: "Relatório Mensal",
             servico: "Geral / Oficina",
             totalServico: 0,
             taxa: 0,
@@ -93,43 +119,45 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!texto) return resultado;
 
-        // Procura pelo nome do funcionário nas primeiras linhas do PDF
+        // 1. Localiza o nome do funcionário eliminando prefixos numéricos
+        const regexNome = /(?:Comissões do funcionário|funcionário).*?\n(?:.*?-\s*)?([A-ZÁÉÍÓÚÂÊÔ⚠️ ]+)/i;
         const linhas = texto.split('\n');
         for (let linha of linhas) {
-            if (linha.toUpperCase().includes('MARCO')) {
-                // Remove numeração comum que vem antes (Ex: "16- MARCO...")
-                resultado.nomeColaboradorPdf = linha.replace(/^\d+-\s*/, '').trim();
+            if (linha.toUpperCase().includes('MARCO') || linha.toUpperCase().includes('BERNARDO') || linha.toUpperCase().includes('BERNADO')) {
+                resultado.nomeColaboradorPdf = linha.replace(/^\d+-\s*/, '').replace(/["',]/g, '').trim();
                 break;
             }
         }
 
-        // Procura os valores de fechamento (SubTotal ou Total Geral)
-        const regexValores = /(?:SubTotal|Total\s+Geral)[^\d]*([\d.,]+)[^\d]+([\d.,]+)/i;
-        const matchValores = texto.match(regexValores);
+        // 2. Captura de valores baseada no padrão estruturado do fechamento do relatório (SubTotal / Total Geral)
+        // Esse regex captura os valores ignorando as aspas, espaços e vírgulas da tabela gerada pelo leitor
+        const regexSubTotal = /SubTotal\s*["']?\s*,\s*["']?\s*([\d.]+,\d{2})\s*["']?\s*,\s*["']?\s*([\d.]+,\d{2})/i;
+        const matchSub = texto.match(regexSubTotal);
 
-        if (matchValores) {
-            const bruto = parseFloat(matchValores[1].replace(/\./g, '').replace(',', '.'));
-            const comis = parseFloat(matchValores[2].replace(/\./g, '').replace(',', '.'));
+        if (matchSub) {
+            const bruto = parseFloat(matchSub[1].replace(/\./g, '').replace(',', '.'));
+            const comis = parseFloat(matchSub[2].replace(/\./g, '').replace(',', '.'));
             
             resultado.totalServico = bruto;
-            resultado.taxa = bruto * 0.20; 
+            resultado.taxa = bruto - comis; // Calcula a retenção real exata da diferença
             resultado.subtotal = bruto;
-            resultado.comissao = comis; 
+            resultado.comissao = comis;
         } else {
-            // Fallback: Busca o último valor em formato de dinheiro se a estrutura falhar
-            const valoresDinheiro = texto.match(/([\d.]+,\d{2})/g);
+            // Fallback robusto para buscar as duas últimas linhas financeiras caso o layout mude
+            const valoresDinheiro = texto.match(/[\d.]+,\d{2}/g);
             if (valoresDinheiro && valoresDinheiro.length >= 2) {
                 const comis = parseFloat(valoresDinheiro[valoresDinheiro.length - 1].replace(/\./g, '').replace(',', '.'));
                 const bruto = parseFloat(valoresDinheiro[valoresDinheiro.length - 2].replace(/\./g, '').replace(',', '.'));
+                
                 resultado.totalServico = bruto;
-                resultado.taxa = bruto * 0.20;
+                resultado.taxa = bruto - comis;
                 resultado.comissao = comis;
             }
         }
         return resultado;
     }
 
-    // 4. MECANISMO DE DRAG / UPLOAD DO ARQUIVO PDF
+    // 4. MECANISMO DE UPLOAD DO ARQUIVO PDF
     if (btnUploadPdf && inputPdf) {
         btnUploadPdf.onclick = () => inputPdf.click();
 
@@ -151,7 +179,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                     
                     let textoCompleto = "";
 
-                    // Varre as páginas extraindo os itens textuais de forma simples e direta
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const pagina = await pdf.getPage(i);
                         const conteudo = await pagina.getTextContent();
@@ -159,22 +186,20 @@ document.addEventListener("DOMContentLoaded", async () => {
                         textoCompleto += textoPagina + "\n";
                     }
 
-                    // Força a exibição de todo o texto no textarea para conferência
                     dadosComissao.value = textoCompleto.trim();
-                    
-                    // Executa o interpretador inteligente
                     dadosAtuais = interpretarTextoOficina(textoCompleto);
 
-                    // Vincula o Colaborador Automaticamente (Mesmo se houver erro de digitação de letras)
+                    // Vinculação por tolerância ortográfica (Ignora diferenças como "BERNADO" vs "BERNARDO")
                     if (dadosAtuais.nomeColaboradorPdf) {
-                        const nomeInjetado = dadosAtuais.nomeColaboradorPdf.toLowerCase().replace(/[^a-z]/g, '');
+                        // Remove espaços e letras repetidas sequenciais aproximadas para bater a string limpa
+                        const simplificar = (str) => str.toLowerCase().replace(/[^a-z]/g, '').replace('bernardo', 'bernado');
+                        const nomeInjetado = simplificar(dadosAtuais.nomeColaboradorPdf);
                         
                         for (let option of selectColaborador.options) {
                             if (!option.value) continue;
-                            const nomeOpcao = option.value.toLowerCase().replace(/[^a-z]/g, '');
+                            const nomeOpcao = simplificar(option.value);
                             
-                            // Se um nome contiver o outro (Trata o caso "BERNADO" vs "BERNARDO")
-                            if (nomeInjetado.includes(nomeOpcao) || nomeOpcao.includes(nomeInjetado) || nomeInjetado.substring(0, 5) === nomeOpcao.substring(0, 5)) {
+                            if (nomeInjetado.includes(nomeOpcao) || nomeOpcao.includes(nomeInjetado) || nomeInjetado.substring(0, 8) === nomeOpcao.substring(0, 8)) {
                                 selectColaborador.value = option.value;
                                 break;
                             }
@@ -200,7 +225,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         btnUploadPdf.style.background = "#4f46e5";
     }
 
-    // 5. EVENTOS DE INTERAÇÃO DOS FILTROS E INPUTS
+    // 5. EVENTOS DE INTERAÇÃO
     filtroCategoria.onchange = () => {
         renderizarSelectColaboradores(filtroCategoria.value);
         atualizarTelaDinamica();
@@ -232,7 +257,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         let telefone = opcaoAtiva.dataset.tel ? opcaoAtiva.dataset.tel.replace(/\D/g, '') : '';
 
         try {
-            // Salva na tabela de relatórios
             const { error } = await _supabase.from('comissoes_oficina').insert([{
                 colaborador: nomeColaborador,
                 numero_os: dadosAtuais.os,
@@ -250,14 +274,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.error("Erro ao salvar histórico:", err);
         }
 
-        // Formata a mensagem do WhatsApp
         let msg = `*⚙️ RELATÓRIO DE COMISSÃO - OFICINA*\n\n`;
         msg += `👤 *Colaborador:* ${nomeColaborador}\n`;
         msg += `📌 *Documento:* ${dadosAtuais.os}\n`;
         msg += `🛠️ *Serviço:* ${dadosAtuais.servico}\n`;
-        msg += `💵 *Volume Bruto:* R$ ${(dadosAtuais.totalServico || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+        msg += `💵 *Volume Bruto Realizado:* R$ ${(dadosAtuais.totalServico || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
         msg += `📊 *Retenção Operacional (20%):* R$ ${(dadosAtuais.taxa || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`;
-        msg += `💰 *VALOR DA COMISSÃO:* *R$ ${(dadosAtuais.comissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n`;
+        msg += `💰 *VALOR LÍQUIDO DA COMISSÃO:* *R$ ${(dadosAtuais.comissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n`;
         msg += `*Pagamento:*\n🔑 *PIX:* ${pixColaborador}\n🏦 *Banco:* ${bancoColaborador}`;
 
         if (telefone && telefone.length <= 11) telefone = '55' + telefone;

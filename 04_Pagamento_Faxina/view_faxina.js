@@ -11,7 +11,9 @@ const OficinaView = {
             const option = document.createElement('option');
             option.value = colab.nome;
             option.textContent = colab.nome;
-            option.dataset.pix = colab.pix || 'Não cadastrado';
+            
+            // CORREÇÃO: Vincula os nomes idênticos às colunas vindas do Supabase
+            option.dataset.pix = colab.chave_pix || 'Não cadastrado';
             option.dataset.banco = colab.banco || 'Não informado';
             option.dataset.tel = colab.telefone || '';
             
