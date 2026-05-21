@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ===================================================
-    // RECONSTRUTOR DE MATRIZ TEXTUAL DO PDF (TOLERÂNCIA AMPLIADA)
+    // RECONSTRUTOR DE MATRIZ TEXTUAL DO PDF (TOLERÂNCIA AMPLIADA PARA 10)
     // ===================================================
     if (btnUploadPdf && inputPdf) {
         btnUploadPdf.onclick = () => inputPdf.click();
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             const pagina = await pdf.getPage(i);
                             const conteudo = await pagina.getTextContent();
                             
-                            // Ordenação geométrica com tolerância expandida para tabelas densas (10px de limite)
+                            // Ordenação geométrica corrigida para tabelas densas (10px de limite)
                             const itensMapeados = [...conteudo.items].sort((a, b) => {
                                 if (Math.abs(a.transform[5] - b.transform[5]) > 10) {
                                     return b.transform[5] - a.transform[5]; 
@@ -81,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             for (const item of itensMapeados) {
                                 if (!item.str) continue;
 
-                                // Identifica quebras de linha reais na tabela do PDF
                                 if (ultimoY !== null && Math.abs(item.transform[5] - ultimoY) > 10) {
                                     textoPagina += "\n";
                                 } else if (textoPagina !== "" && !textoPagina.endsWith("\n") && !textoPagina.endsWith(" ")) {
@@ -93,8 +92,8 @@ document.addEventListener("DOMContentLoaded", () => {
                             textoCompleto += textoPagina + "\n";
                         }
 
-                        // Garante o envio do texto para a view mesmo se houver strings vazias residuais
-                        dadosComissao.value = textoCompleto.trim() || "Falha na conversão de strings de dados.";
+                        // Carrega o texto bruto final no textarea
+                        dadosComissao.value = textoCompleto.trim();
 
                         // Processa a inteligência do Regex no Model
                         dadosAtuais = OficinaModel.interpretarTexto(textoCompleto);
@@ -185,7 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const bancoColaborador = opcaoAtiva.dataset.banco || 'Não informado';
         let telefone = opcaoAtiva.dataset.tel ? opcaoAtiva.dataset.tel.replace(/\D/g, '') : '';
 
-        // Envia o payload estruturado para a nova tabela do Supabase
+        // Gravação Real na tabela criada no seu Supabase para alimentar relatórios futuros
         try {
             const { error } = await _supabase.from('comissoes_oficina').insert([{
                 colaborador: nomeColaborador,
@@ -199,11 +198,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }]);
             
             if (error) throw error;
-            console.log("✅ Dados salvos com sucesso na tabela comissoes_oficina!");
+            console.log("✅ Dados arquivados com sucesso em comissoes_oficina!");
 
         } catch (err) {
             console.error("Erro de persistência no Supabase:", err);
-            alert("⚠️ Os dados do relatório não puderam ser guardados, mas o WhatsApp será aberto.");
+            alert("⚠️ Erro ao salvar no banco, mas o link do WhatsApp prosseguirá.");
         }
 
         // Constrói a mensagem padrão para o WhatsApp

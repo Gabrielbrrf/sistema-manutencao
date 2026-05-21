@@ -23,15 +23,15 @@ const OficinaModel = {
         }
 
         // 1. VERIFICAÇÃO: É um Relatório Mensal Consolidado de Várias OSs?
-        const ehRelatorioMensal = texto.includes("Comissões do funcionário") || texto.includes("Total Geral");
+        const ehRelatorioMensal = texto.includes("Comissões do funcionário") || texto.includes("Total Geral") || texto.includes("SubTotal");
 
         if (ehRelatorioMensal) {
             // Captura o nome do funcionário (Ex: "16- MARCO AURÉLIO BERNARDO")
             const nomeMatch = texto.match(/\d+-\s*([A-ZÀ-Ú\s]+)/i);
             const nomePdf = nomeMatch ? nomeMatch[1].trim() : null;
 
-            // Captura a linha de fechamento (Ex: "Total Geral 4.410,00 882,00")
-            const linhaTotalMatch = texto.match(/(?:Total\s+Geral|SubTotal)[\D]*([0-9.,]+)[\D]+([0-9.,]+)/i);
+            // Busca Flexível da linha de fechamento (Suporta quebras de linha entre as colunas)
+            const linhaTotalMatch = texto.match(/(?:Total\s+Geral|SubTotal)[\s\n]*([0-9.,]+)[\s\n]*([0-9.,]+)/i);
             
             let totalServico = 0;
             let comissao = 0;
@@ -39,6 +39,13 @@ const OficinaModel = {
             if (linhaTotalMatch) {
                 totalServico = this.converteValor(linhaTotalMatch[1]);
                 comissao = this.converteValor(linhaTotalMatch[2]);
+            } else {
+                // FALLBACK: Se o PDF quebrou as colunas geometricamente, busca os últimos valores monetários do texto
+                const todosValores = texto.match(/[0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2}/g);
+                if (todosValores && todosValores.length >= 2) {
+                    comissao = this.converteValor(todosValores[todosValores.length - 1]);
+                    totalServico = this.converteValor(todosValores[todosValores.length - 2]);
+                }
             }
 
             // Tenta pegar o período de referência do fechamento
