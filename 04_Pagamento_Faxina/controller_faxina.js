@@ -1,4 +1,4 @@
-/* controller_oficina.js - Orquestrador da Tela de Comissões */
+/* controller_oficina.js - Execução Direta e Segura */
 
 // 1. MAPEAMENTO DOS ELEMENTOS DO DOM
 const filtroCategoria = document.getElementById('filtroCategoria');
@@ -7,38 +7,55 @@ const dadosComissao = document.getElementById('dadosComissao');
 const btnWhatsAppTexto = document.getElementById('btnWhatsAppTexto');
 const btnImprimirPDF = document.getElementById('btnImprimirPDF');
 
-// 2. DISPARO INICIAL DIRETO
-// Como o script está no fim do HTML, rodamos direto sem esperar o DOMContentLoaded
-inicializarModuloOficina();
+// 2. INICIALIZAÇÃO IMEDIATA (Sem travar em eventos do navegador)
+(async function inicializarModuloOficina() {
+    console.log("🚀 Inicializando módulo da oficina...");
 
-async function inicializarModuloOficina() {
+    if (typeof _supabase === 'undefined') {
+        selectColaborador.innerHTML = "<option>❌ ERRO: _supabase não encontrado</option>";
+        return;
+    }
+    if (typeof OficinaModel === 'undefined') {
+        selectColaborador.innerHTML = "<option>❌ ERRO: model_oficina.js não carregou</option>";
+        return;
+    }
+    if (typeof OficinaView === 'undefined') {
+        selectColaborador.innerHTML = "<option>❌ ERRO: view_oficina.js não carregou</option>";
+        return;
+    }
+
     try {
-        // Busca os contatos no banco de dados via Supabase usando seu Model
         const equipe = await OficinaModel.buscarColaboradores();
         
-        // Alimenta o select com os colaboradores respeitando o filtro inicial via View
+        if (!equipe || equipe.length === 0) {
+            selectColaborador.innerHTML = "<option>⚠️ Banco retornou zero colaboradores</option>";
+            return;
+        }
+        
         OficinaView.atualizarSelectColaboradores(equipe, filtroCategoria.value);
-    } catch (error) {
-        console.error("Erro na inicialização do módulo:", error);
-    }
-}
+        console.log("✅ Equipe carregada com sucesso!");
 
-// 3. EVENTO: FILTRAR COLABORADORES POR CATEGORIA/SETOR
+    } catch (error) {
+        console.error("Erro crítico na carga:", error);
+        selectColaborador.innerHTML = `<option>❌ ERRO: ${error.message}</option>`;
+    }
+})();
+
+// 3. EVENTO: FILTRAR COLABORADORES
 filtroCategoria.onchange = () => {
     OficinaView.atualizarSelectColaboradores(OficinaModel.listaColaboradores, filtroCategoria.value);
 };
 
-// 4. EVENTO: CAPTURA E LEITURA EM TEMPO REAL (Ao colar ou digitar o relatório/PDF)
+// 4. EVENTO: LEITURA DO TEXTO COPIADO DO PDF
 dadosComissao.oninput = () => {
-    const textoBruto = dadosComissao.value;
-    const dadosProcessados = OficinaModel.interpretarTexto(textoBruto);
+    const dadosProcessados = OficinaModel.interpretarTexto(dadosComissao.value);
     OficinaView.renderizarCampos(dadosProcessados);
 };
 
 // 5. AÇÃO: SALVAR NO BANCO E ENVIAR WHATSAPP
 btnWhatsAppTexto.onclick = async () => {
-    if (!selectColaborador.value) {
-        alert("⚠️ Por favor, selecione um colaborador na lista antes de enviar!");
+    if (!selectColaborador.value || selectColaborador.value.includes('❌') || selectColaborador.value.includes('Carregando')) {
+        alert("⚠️ Selecione um colaborador válido antes de enviar!");
         return;
     }
 
@@ -47,14 +64,13 @@ btnWhatsAppTexto.onclick = async () => {
 
     const opcaoAtiva = selectColaborador.options[selectColaborador.selectedIndex];
     const nomeColaborador = opcaoAtiva.value;
-    const pixColaborador = opcaoAtiva.dataset.pix;
-    const bancoColaborador = opcaoAtiva.dataset.banco;
+    const pixColaborador = opcaoAtiva.dataset.pix || 'Não informado';
+    const bancoColaborador = opcaoAtiva.dataset.banco || 'Não informado';
     let telefone = opcaoAtiva.dataset.tel ? opcaoAtiva.dataset.tel.replace(/\D/g, '') : '';
 
     const dadosOS = OficinaModel.interpretarTexto(dadosComissao.value);
 
     try {
-        // Salva os dados na sua tabela do Supabase
         await _supabase.from('comissoes_oficina').insert([{
             colaborador: nomeColaborador,
             numero_os: dadosOS.os,
@@ -66,7 +82,7 @@ btnWhatsAppTexto.onclick = async () => {
             data_registro: new Date().toISOString()
         }]);
     } catch (err) {
-        console.error("Erro ao salvar:", err);
+        console.error("Erro ao salvar no Supabase:", err);
     }
 
     const textoMensagem = 
@@ -89,14 +105,10 @@ btnWhatsAppTexto.onclick = async () => {
         telefone = '55' + telefone;
     }
 
-    const urlApiWhatsApp = `https://api.whatsapp.com/send?phone=${telefone}&text=${encodeURIComponent(textoMensagem)}`;
-    window.open(urlApiWhatsApp, '_blank');
+    window.open(`https://api.whatsapp.com/send?phone=${telefone}&text=${encodeURIComponent(textoMensagem)}`, '_blank');
 
     btnWhatsAppTexto.disabled = false;
     btnWhatsAppTexto.innerText = "💬 Enviar via Whats";
 };
 
-// 6. AÇÃO: IMPRIMIR / GERAR PDF
-btnImprimirPDF.onclick = () => {
-    window.print();
-};
+btnImprimirPDF.onclick = () => window.print();
