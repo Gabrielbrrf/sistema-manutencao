@@ -1,22 +1,41 @@
-const FaxinaView = {
-    renderizarResultado(res) {
-        const displayTotal = document.getElementById('valorTotal');
-        const displayQtd = document.getElementById('qtdAptos');
-        const displayErros = document.getElementById('alertaErro');
+/* view_oficina.js - Renderização Fixa na Tela */
 
-        displayTotal.innerText = `R$ ${res.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        displayQtd.innerText = res.qtd;
-
-        if (res.invalidos.length > 0) {
-            displayErros.innerHTML = `⚠️ Cód. não reconhecidos: <br><strong>${res.invalidos.join(', ')}</strong>`;
-            displayErros.style.display = "block";
-        } else {
-            displayErros.style.display = "none";
-        }
+const OficinaView = {
+    renderizarCampos(dados) {
+        document.getElementById('resOS').innerText = dados.os;
+        document.getElementById('resServico').innerText = dados.servico;
+        document.getElementById('resPronto').innerText = dados.pronto;
+        document.getElementById('resSaida').innerText = dados.saida;
+        
+        document.getElementById('resTotalServico').innerText = this.formatarBRL(dados.totalServico);
+        document.getElementById('resTaxa').innerText = this.formatarBRL(dados.taxa);
+        document.getElementById('resSubtotal').innerText = this.formatarBRL(dados.subtotal);
+        
+        // Campo principal de recebimento destacado
+        document.getElementById('valorTotalComissao').innerText = this.formatarBRL(dados.comissao);
     },
 
-    limpar() {
-        document.getElementById('listaCodigos').value = "";
-        this.renderizarResultado({ total: 0, qtd: 0, invalidos: [] });
+    atualizarSelectColaboradores(lista, categoriaSelecionada = "TODOS") {
+        const select = document.getElementById('selectColaborador');
+        select.innerHTML = '<option value="">Selecione o Colaborador</option>';
+
+        // Filtra conforme a categoria se não for "TODOS"
+        const filtrados = categoriaSelecionada === "TODOS" 
+            ? lista 
+            : lista.filter(c => c.categoria === categoriaSelecionada);
+
+        filtrados.forEach(f => {
+            let opt = document.createElement('option');
+            opt.value = f.nome;
+            opt.innerText = f.nome;
+            opt.dataset.pix = f.chave_pix || "Não cadastrado";
+            opt.dataset.tel = f.telefone || "";
+            opt.dataset.banco = f.banco || "Não informado";
+            select.appendChild(opt);
+        });
+    },
+
+    formatarBRL(valor) {
+        return `R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     }
 };

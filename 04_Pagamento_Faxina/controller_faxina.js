@@ -1,112 +1,120 @@
-/* controller_faxina.js - Integrado ao Supabase, WhatsApp e Histórico de Gastos */
+/* controller_oficina.js - Orquestrador da Tela de Comissões */
 
-window.onload = async () => {
-    // 1. Sincroniza os preços do banco de dados antes de tudo
-    if (typeof FaxinaModel !== 'undefined') {
-        await FaxinaModel.sincronizarPrecos();
+// 1. MAPEAMENTO DOS ELEMENTOS DO DOM
+const filtroCategoria = document.getElementById('filtroCategoria');
+const selectColaborador = document.getElementById('selectColaborador');
+const dadosComissao = document.getElementById('dadosComissao');
+const btnWhatsAppTexto = document.getElementById('btnWhatsAppTexto');
+const btnImprimirPDF = document.getElementById('btnImprimirPDF');
 
-        // 2. Carrega as faxineiras da tabela 'contatos'
-        const faxineiras = await FaxinaModel.buscarFaxineiras();
-        const select = document.getElementById('selectFaxineira');
-        
-        if (!faxineiras || faxineiras.length === 0) {
-            select.innerHTML = '<option value="">Nenhuma faxineira no banco</option>';
-        } else {
-            select.innerHTML = '<option value="">Selecione a Faxineira</option>';
-            faxineiras.forEach(f => {
-                let opt = document.createElement('option');
-                opt.value = f.nome;
-                opt.innerHTML = f.nome;
-                
-                // Armazena dados extras para o WhatsApp
-                opt.dataset.pix = f.chave_pix || "Não cadastrado";
-                opt.dataset.tel = f.telefone || "";
-                opt.dataset.banco = f.banco || "Não informado";
-                select.appendChild(opt);
-            });
-        }
-    }
-};
+// 2. DISPARO INICIAL (Carrega a equipe ao abrir a página)
+document.addEventListener('DOMContentLoaded', inicializarModuloOficina);
 
-// Cálculo em tempo real ao digitar
-document.getElementById('listaCodigos').addEventListener('input', (e) => {
-    if (typeof FaxinaModel !== 'undefined' && typeof FaxinaView !== 'undefined') {
-        const res = FaxinaModel.calcular(e.target.value);
-        FaxinaView.renderizarResultado(res);
-    }
-});
-
-// Salvar novos preços ou editar direto no Supabase
-async function salvarPreco() {
-    const cod = document.getElementById('novoCod').value;
-    const preco = document.getElementById('novoPreco').value;
+async function inicializarModuloOficina() {
+    // Busca os contatos no banco de dados via Supabase usando seu Model
+    const equipe = await OficinaModel.buscarColaboradores();
     
-    if (cod && preco && typeof FaxinaModel !== 'undefined') {
-        await FaxinaModel.salvarNovoPrecoNoBanco(cod, preco);
-        alert(`Sucesso! ${cod.toUpperCase()} atualizado no banco.`);
-        
-        document.getElementById('novoCod').value = "";
-        document.getElementById('novoPreco').value = "";
-        
-        const res = FaxinaModel.calcular(document.getElementById('listaCodigos').value);
-        FaxinaView.renderizarResultado(res);
-    } else {
-        alert("Preencha o código e o valor!");
-    }
+    // Alimenta o select com os colaboradores respeitando o filtro inicial via View
+    OficinaView.atualizarSelectColaboradores(equipe, filtroCategoria.value);
 }
 
-// Gerar Comprovante, Salvar no Banco e enviar para o WhatsApp
-document.getElementById('btnGerarComprovante').addEventListener('click', async () => {
-    const select = document.getElementById('selectFaxineira');
-    const opcaoSel = select.options[select.selectedIndex];
-    
-    const totalTexto = document.getElementById('valorTotal').innerText;
-    // Converte "R$ 150,00" em número decimal (150.00) para o banco
-    const totalNumerico = parseFloat(totalTexto.replace('R$', '').replace('.', '').replace(',', '.').trim());
-    
-    const aptos = document.getElementById('listaCodigos').value.toUpperCase();
-    const cidade = document.getElementById('cidadeFaxina').value;
-    const tipo = document.getElementById('tipoFaxina').value;
+// 3. EVENTO: FILTRAR COLABORADORES POR CATEGORIA/SETOR
+filtroCategoria.onchange = () => {
+    // Filtra dinamicamente a equipe sem precisar fazer outra requisição ao banco
+    OficinaView.atualizarSelectColaboradores(OficinaModel.listaColaboradores, filtroCategoria.value);
+};
 
-    if (!opcaoSel || !opcaoSel.value || totalNumerico === 0) {
-        return alert("Selecione a faxineira e insira códigos válidos!");
+// 4. EVENTO: CAPTURA E LEITURA EM TEMPO REAL (Ao colar ou digitar o relatório)
+dadosComissao.oninput = () => {
+    const textoBruto = dadosComissao.value;
+    
+    // Executa o interpretador do Model para extrair os valores da OS
+    const dadosProcessados = OficinaModel.interpretarTexto(textoBruto);
+    
+    // Passa o objeto estruturado para a View atualizar a tela
+    OficinaView.renderizarCampos(dadosProcessados);
+};
+
+// 5. AÇÃO: SALVAR NO BANCO E ENVIAR WHATSAPP
+btnWhatsAppTexto.onclick = async () => {
+    // Validação: Verifica se o usuário escolheu um colaborador
+    if (!selectColaborador.value) {
+        alert("⚠️ Por favor, selecione um colaborador na lista antes de enviar!");
+        return;
     }
 
-    // --- NOVIDADE: GRAVANDO NO HISTÓRICO ---
-    const { error } = await _supabase
-        .from('pagamentos_realizados')
-        .insert([{
-            nome_faxineira: opcaoSel.value,
-            cidade: cidade,
-            tipo_contrato: tipo,
-            valor_total: totalNumerico,
-            apartamentos: aptos
-        }]);
+    // Desativa o botão temporariamente para evitar cliques duplos
+    btnWhatsAppTexto.disabled = true;
+    btnWhatsAppTexto.innerText = "🔄 Processando e Salvando...";
 
-    if (error) {
-        console.error("Erro ao salvar no histórico:", error);
-    } else {
-        console.log("Pagamento registrado no banco com sucesso!");
-    }
-    // ---------------------------------------
-
-    const nome = opcaoSel.value;
-    const pix = opcaoSel.dataset.pix;
-    const banco = opcaoSel.dataset.banco;
+    // Captura a opção ativa dentro do select para extrair os datasets injetados pela View
+    const opcaoAtiva = selectColaborador.options[selectColaborador.selectedIndex];
+    const nomeColaborador = opcaoAtiva.value;
+    const pixColaborador = opcaoAtiva.dataset.pix;
+    const bancoColaborador = opcaoAtiva.dataset.banco;
     
-    let tel = opcaoSel.dataset.tel ? opcaoSel.dataset.tel.replace(/\D/g, '') : "";
-    if (tel.length === 11) tel = "55" + tel;
+    // Limpa o número do telefone deixando apenas os dígitos numéricos
+    let telefone = opcaoAtiva.dataset.tel ? opcaoAtiva.dataset.tel.replace(/\D/g, '') : '';
 
-    const mensagem = `*PAGAMENTO FAXINA - SUPER HOST*%0A%0A` +
-                     `Olá ${nome}! 👋%0A%0A` +
-                     `*Resumo do Serviço:*%0A` +
-                     `🏠 Aptos: ${aptos}%0A` +
-                     `💰 *Total a receber: ${totalTexto}*%0A%0A` +
-                     `*Dados para o Pix:*%0A` +
-                     `🔑 Chave: ${pix}%0A` +
-                     `🏦 Banco: ${banco}%0A%0A` +
-                     `Por favor, confirme se os dados estão corretos!`;
+    // Recupera em tempo real os dados extraídos do texto colado
+    const dadosOS = OficinaModel.interpretarTexto(dadosComissao.value);
 
-    // Abre na aba inteligente
-    window.open(`https://api.whatsapp.com/send?phone=${tel}&text=${mensagem}`, 'whatsapp_janela');
-});
+    try {
+        // Envia os dados diretamente para a tabela 'comissoes_oficina' no seu Supabase
+        const { error } = await _supabase
+            .from('comissoes_oficina')
+            .insert([{
+                colaborador: nomeColaborador,
+                numero_os: dadosOS.os,
+                servico: dadosOS.servico,
+                total_servico: dadosOS.totalServico,
+                taxa_administrativa: dadosOS.taxa,
+                subtotal: dadosOS.subtotal,
+                valor_comissao: dadosOS.comissao,
+                data_registro: new Date().toISOString()
+            }]);
+
+        if (error) {
+            console.error("Erro ao salvar no Supabase:", error);
+            alert("⚠️ Os dados não foram salvos no histórico, mas o WhatsApp será aberto.");
+        }
+    } catch (err) {
+        console.error("Erro inesperado:", err);
+    }
+
+    // Montagem da mensagem estruturada para o WhatsApp
+    const textoMensagem = 
+`*⚙️ RELATÓRIO DE COMISSÃO - OFICINA*
+
+👤 *Colaborador:* ${nomeColaborador}
+📌 *Nº O.S:* ${dadosOS.os}
+🛠️ *Serviço:* ${dadosOS.servico}
+💵 *Total do Serviço:* R$ ${dadosOS.totalServico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+📊 *Taxa Administrativa (20%):* R$ ${dadosOS.taxa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+📉 *Subtotal Geral:* R$ ${dadosOS.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+
+💰 *VALOR DA COMISSÃO A RECEBER:* *R$ ${dadosOS.comissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*
+
+*Dados Cadastrados para Pagamento:*
+🔑 *Chave PIX:* ${pixColaborador}
+🏦 *Instituição:* ${bancoColaborador}`;
+
+    // Adiciona o DDI do Brasil (55) caso o telefone tenha apenas o DDD e o número
+    if (telefone && telefone.length <= 11) {
+        telefone = '55' + telefone;
+    }
+
+    // Monta o link oficial e abre o WhatsApp em uma nova aba
+    const urlApiWhatsApp = `https://api.whatsapp.com/send?phone=${telefone}&text=${encodeURIComponent(textoMensagem)}`;
+    window.open(urlApiWhatsApp, '_blank');
+
+    // Restaura o estado original do botão
+    btnWhatsAppTexto.disabled = false;
+    btnWhatsAppTexto.innerText = "💬 Enviar via Whats";
+};
+
+// 6. AÇÃO: IMPRIMIR / GERAR PDF
+btnImprimirPDF.onclick = () => {
+    // Abre a tela de impressão nativa do sistema operacional
+    window.print();
+};
