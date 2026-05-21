@@ -3,81 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Pix - PROGGABS</title>
+    <title>Comissões Oficina - PROGGABS</title>
     <link rel="stylesheet" href="../style_global.css">
-
+    
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // --- CONFIGURAÇÃO ---
         const supabaseUrl = 'https://olawjagrfhcxsonmyopi.supabase.co';
-        
-        // Chave Anon colada com sucesso!
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY'; 
-        
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Segurança de Acesso
+        (function() {
+            const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+            if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
+                alert("Área Restrita!");
+                window.location.href = "../00_Portal/portal.html";
+            }
+        })();
     </script>
-    <script>
-    (function() {
-        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-        // Se não for MASTER, expulsa para o portal
-        if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
-            alert("Área Restrita!");
-            window.location.href = "../00_Portal/portal.html";
-        }
-    })();
-</script>
 </head>
 <body>
     <div class="container">
         <header>
-            <a href="../00_Portal/portal.html" class="btn-voltar">⬅️ Menu</a>
-            <h1>💰 Gestão de Pagamentos</h1>
+            <h1>⚙️ Comissões da Oficina</h1>
+            <div style="display: flex; gap: 10px;">
+                <button class="badge-pix" onclick="window.location.href='../05_Relatorio_Faxina/relatorio.html'" style="background: #2563eb;">📊 Histórico</button>
+                <button class="badge-pix" onclick="window.location.href='../00_Portal/portal.html'">Voltar</button>
+            </div>
         </header>
 
-        <div class="meses-container" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
-            <button id="btn-tab-lista" class="tab-btn active" style="flex: 1;">🔍 Pesquisar</button>
-            <button id="btn-tab-cadastro" class="tab-btn" style="flex: 1; background: #27ae60;">➕ Novo Cadastro</button>
-        </div>
-
-        <main id="aba-lista">
-            <div class="search-container" style="margin-bottom: 20px;">
-                <input type="text" id="inputBusca" placeholder="Quem você está procurando?" style="width: 100%;">
+        <section class="form-grid-vertical">
+            <!-- Filtros de Categoria e Colaborador -->
+            <div style="display: flex; gap: 10px;">
+                <select id="filtroCategoria" style="flex: 1;">
+                    <option value="TODOS">Todos os Setores</option>
+                    <option value="Operacional">👷 Mecânico</option>
+                    <option value="Retifica">🏢 Retífica (Jose)</option>
+                    <option value="ADM">👔 Escritório (ADM)</option>
+                </select>
             </div>
-            
-            <div id="conteudo-lista"></div>
-        </main>
 
-        <section id="aba-cadastro" class="hidden">
-            <div class="form-grid-vertical">
-                <h3 style="margin-bottom: 10px; color: #2c3e50;">Cadastrar Colaborador</h3>
-                
-                <input type="text" id="reg-nome" placeholder="Nome Completo">
-                <input type="text" id="reg-pix" placeholder="Chave PIX">
-                <input type="text" id="reg-tel" placeholder="Telefone (Ex: 551399...)">
-                <input type="text" id="reg-banco" placeholder="Nome do Banco">
-                
-                <label style="font-size: 12px; font-weight: bold; color: #64748b; margin-top: 10px;"> Setor:</label>
-                <select id="reg-cidade">
-                    <option value="Administração">👔 Administração (Interno)</option>
-                    <option value="Operacao" selected>⚙️ Operacional</option>
-                    
-                </select>
+            <select id="selectColaborador">
+                <option value="">Carregando equipe...</option>
+            </select>
 
-                <label style="font-size: 12px; font-weight: bold; color: #64748b; margin-top: 10px;">Tipo de Serviço:</label>
-                <select id="reg-categoria">
-                    <option value="Retifica">🏢 Jose</option>
-                    <option value="Operacional">👷 Mecanico </option>
-                    <option value="ADM">👔 Escritorio  (ADM)</option>
-                </select>
+            <!-- Entrada de dados (Colar Relatório) -->
+            <label style="font-size: 11px; font-weight: bold; margin-top: 10px;">COLE O TEXTO/DADOS DA COMISSÃO AQUI:</label>
+            <textarea id="dadosComissao" placeholder="Cole aqui os dados da OS, valores de 20%, subtotal e comissão..." style="height: 120px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-family: monospace;"></textarea>
+
+            <!-- Apresentação Fixa dos Dados Extraídos -->
+            <div id="boxResultado" style="background: #f0fdf4; padding: 20px; border-radius: 12px; border: 2px solid #bbf7d0; margin-top: 15px; text-align: left;">
+                <span style="display: block; font-size: 12px; color: #166534; font-weight: bold; text-align: center; margin-bottom: 10px;">
+                    RESUMO DA ORDEM DE SERVIÇO
+                </span>
                 
-                <button class="btn-salvar" id="btn-salvar" style="margin-top: 20px;">SALVAR NO BANCO</button>
+                <div style="font-size: 13px; color: #334155; line-height: 1.6;">
+                    📌 <strong>Nº O.S:</strong> <span id="resOS">-</span><br>
+                    🛠️ <strong>Serviço:</strong> <span id="resServico">-</span><br>
+                    ⏱️ <strong>Pronto:</strong> <span id="resPronto">-</span> | <strong>Saída:</strong> <span id="resSaida">-</span><br>
+                    💵 <strong>Total do Serviço:</strong> <span id="resTotalServico">R$ 0,00</span><br>
+                    📊 <strong>Taxa (20%):</strong> <span id="resTaxa">R$ 0,00</span><br>
+                    📉 <strong>Subtotal / Total Geral:</strong> <span id="resSubtotal">R$ 0,00</span><br>
+                </div>
+
+                <hr style="border: 0; border-top: 1px dashed #bbf7d0; margin: 12px 0;">
+
+                <div style="text-align: center;">
+                    <span style="font-size: 11px; color: #166534; font-weight: bold; display: block;">VALOR DA COMISSÃO A PAGAR</span>
+                    <strong id="valorTotalComissao" style="font-size: 32px; color: #15803d; display: block; margin: 5px 0;">R$ 0,00</strong>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn-salvar" id="btnWhatsAppTexto" style="flex: 1; background: #25d366;">💬 Enviar via Whats</button>
+                <button class="btn-salvar" id="btnImprimirPDF" style="flex: 1; background: #475569;">📄 Visualizar / PDF</button>
             </div>
         </section>
     </div>
 
-    <script type="module" src="controller.js"></script>
+    <!-- Scripts MVC -->
+    <script src="model_oficina.js"></script>
+    <script src="view_oficina.js"></script>
+    <script src="controller_oficina.js"></script>
 </body>
-
 </html>
-

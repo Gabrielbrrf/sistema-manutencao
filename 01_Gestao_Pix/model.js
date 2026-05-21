@@ -1,66 +1,63 @@
-/* model.js - Versão Supabase Adaptada */
+/* model_oficina.js - Lógica de Captura e Integração com Supabase */
 
-export const Model = {
-    // Busca todos os colaboradores
-    async listarTodos() {
+const OficinaModel = {
+    listaColaboradores: [],
+
+    // Busca os contatos cadastrados na base do Gestão Pix
+    async buscarColaboradores() {
         const { data, error } = await _supabase
             .from('contatos')
             .select('*')
             .order('nome', { ascending: true });
         
         if (error) {
-            console.error("Erro ao listar:", error);
+            console.error("Erro ao buscar equipe:", error);
             return [];
         }
-        return data;
+        this.listaColaboradores = data || [];
+        return this.listaColaboradores;
     },
 
-    // Busca filtrada por nome
-    async buscar(termo) {
-        const { data, error } = await _supabase
-            .from('contatos')
-            .select('*')
-            .ilike('nome', `%${termo}%`)
-            .order('nome', { ascending: true });
-        
-        if (error) {
-            console.error("Erro na busca:", error);
-            return [];
+    // Lê o bloco de texto copiado e extrai cada campo dinamicamente
+    interpretarTexto(texto) {
+        if (!texto.trim()) {
+            return this.retornarVazio();
         }
-        return data;
+
+        // Regex inteligentes para capturar os padrões do seu relatório
+        const osMatch = texto.match(/(?:OS|O\.S|Número|Nº)[\s:]*([0-9]+)/i);
+        const totalServicoMatch = texto.match(/(?:Total do Serviço|Total Serviço|Serviço)[\s:]*R?\$?\s*([0-9.,]+)/i);
+        const taxaMatch = texto.match(/(?:20%|Taxa)[\s:]*R?\$?\s*([0-9.,]+)/i);
+        const subtotalMatch = texto.match(/(?:Subtotal|Sub total|Total Geral)[\s:]*R?\$?\s*([0-9.,]+)/i);
+        const comissaoMatch = texto.match(/(?:Comissão|Comissao|A receber|Pagar)[\s:]*R?\$?\s*([0-9.,]+)/i);
+        
+        // Tenta capturar datas/status simples
+        const prontoMatch = texto.match(/Pronto[\s:]*([^\n|]+)/i);
+        const saidaMatch = texto.match(/Saída[\s:]*([^\n|]+)/i);
+        
+        // Tenta capturar o nome do serviço (geralmente uma linha que sobrou ou descrição)
+        const servicoMatch = texto.match(/(?:Serviço|Desc|Descrição)[\s:]*([^\n]+)/i);
+
+        return {
+            os: osMatch ? osMatch[1] : "Não identificada",
+            servico: servicoMatch ? servicoMatch[1].trim() : "Geral / Oficina",
+            pronto: prontoMatch ? prontoMatch[1].trim() : "Ok",
+            saida: saidaMatch ? saidaMatch[1].trim() : "Imediata",
+            totalServico: totalServicoMatch ? this.converteValor(totalServicoMatch[1]) : 0,
+            taxa: taxaMatch ? this.converteValor(taxaMatch[1]) : 0,
+            subtotal: subtotalMatch ? this.converteValor(subtotalMatch[1]) : 0,
+            comissao: comissaoMatch ? this.converteValor(comissaoMatch[1]) : 0
+        };
     },
 
-    /**
-     * Salva ou Atualiza um colaborador
-     * O Supabase entende que se houver um 'id' no objeto, ele deve atualizar.
-     * Caso contrário, ele insere um novo.
-     */
-    async salvar(dados) {
-        // Se dados.id existir, ele faz update. Se não, faz insert.
-        const { data, error } = await _supabase
-            .from('contatos')
-            .upsert(dados, { onConflict: 'id' });
-        
-        if (error) {
-            console.error("Erro ao salvar/atualizar:", error);
-        }
-        
-        return { success: !error, error };
+    // Auxiliar para transformar "1.250,50" ou "150.00" em float utilizável
+    converteValor(stringValor) {
+        if (!stringValor) return 0;
+        let limpo = stringValor.replace('.', '').replace(',', '.').trim();
+        return parseFloat(limpo) || 0;
     },
 
-    // Exclui por ID
-    async excluir(id) {
-        if (!id) return { success: false, error: "ID não fornecido" };
-
-        const { error } = await _supabase
-            .from('contatos')
-            .delete()
-            .eq('id', id);
-        
-        if (error) {
-            console.error("Erro ao excluir:", error);
-        }
-
-        return { success: !error, error };
+    retornarVazio() {
+        return { os: "-", servico: "-", pronto: "-", saida: "-", totalServico: 0, taxa: 0, subtotal: 0, comissao: 0 };
     }
 };
