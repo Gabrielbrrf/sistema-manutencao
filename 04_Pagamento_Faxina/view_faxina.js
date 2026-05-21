@@ -1,41 +1,33 @@
-/* view_oficina.js - Renderização Fixa na Tela */
+/* view_faxina.js - Renderização do Layout da Oficina */
 
 const OficinaView = {
-    renderizarCampos(dados) {
-        document.getElementById('resOS').innerText = dados.os;
-        document.getElementById('resServico').innerText = dados.servico;
-        document.getElementById('resPronto').innerText = dados.pronto;
-        document.getElementById('resSaida').innerText = dados.saida;
-        
-        document.getElementById('resTotalServico').innerText = this.formatarBRL(dados.totalServico);
-        document.getElementById('resTaxa').innerText = this.formatarBRL(dados.taxa);
-        document.getElementById('resSubtotal').innerText = this.formatarBRL(dados.subtotal);
-        
-        // Campo principal de recebimento destacado
-        document.getElementById('valorTotalComissao').innerText = this.formatarBRL(dados.comissao);
-    },
+    atualizarSelectColaboradores(lista, setor) {
+        const selectColaborador = document.getElementById('selectColaborador');
+        selectColaborador.innerHTML = '<option value="">Selecione o Colaborador...</option>';
 
-    atualizarSelectColaboradores(lista, categoriaSelecionada = "TODOS") {
-        const select = document.getElementById('selectColaborador');
-        select.innerHTML = '<option value="">Selecione o Colaborador</option>';
+        lista.forEach(colab => {
+            if (setor !== 'TODOS' && colab.categoria !== setor) return;
 
-        // Filtra conforme a categoria se não for "TODOS"
-        const filtrados = categoriaSelecionada === "TODOS" 
-            ? lista 
-            : lista.filter(c => c.categoria === categoriaSelecionada);
-
-        filtrados.forEach(f => {
-            let opt = document.createElement('option');
-            opt.value = f.nome;
-            opt.innerText = f.nome;
-            opt.dataset.pix = f.chave_pix || "Não cadastrado";
-            opt.dataset.tel = f.telefone || "";
-            opt.dataset.banco = f.banco || "Não informado";
-            select.appendChild(opt);
+            const option = document.createElement('option');
+            option.value = colab.nome;
+            option.textContent = colab.nome;
+            option.dataset.pix = colab.pix || '';
+            option.dataset.banco = colab.banco || '';
+            option.dataset.tel = colab.telefone || '';
+            
+            selectColaborador.appendChild(option);
         });
     },
 
-    formatarBRL(valor) {
-        return `R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    renderizarCampos(dados) {
+        document.getElementById('resOS').textContent = dados.os;
+        document.getElementById('resServico').textContent = dados.servico;
+        document.getElementById('resPronto').textContent = dados.pronto;
+        document.getElementById('resSaida').textContent = dados.saida;
+        
+        document.getElementById('resTotalServico').textContent = `R$ ${dados.totalServico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('resTaxa').textContent = `R$ ${dados.taxa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('resSubtotal').textContent = `R$ ${dados.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('valorTotalComissao').textContent = `R$ ${dados.comissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     }
 };

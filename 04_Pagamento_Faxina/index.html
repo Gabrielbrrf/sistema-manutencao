@@ -6,8 +6,9 @@
     <title>Comissões Oficina - PROGGABS</title>
     <link rel="stylesheet" href="../style_global.css">
     
-    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     
     <script>
         const supabaseUrl = 'https://olawjagrfhcxsonmyopi.supabase.co';
@@ -35,7 +36,6 @@
         </header>
 
         <section class="form-grid-vertical">
-            <!-- Filtros de Categoria e Colaborador -->
             <div style="display: flex; gap: 10px;">
                 <select id="filtroCategoria" style="flex: 1;">
                     <option value="TODOS">Todos os Setores</option>
@@ -49,11 +49,20 @@
                 <option value="">Carregando equipe...</option>
             </select>
 
-            <!-- Entrada de dados (Colar Relatório) -->
-            <label style="font-size: 11px; font-weight: bold; margin-top: 10px;">COLE O TEXTO/DADOS DA COMISSÃO AQUI:</label>
-            <textarea id="dadosComissao" placeholder="Cole aqui os dados da OS, valores de 20%, subtotal e comissão..." style="height: 120px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-family: monospace;"></textarea>
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 10px;">
+                <label style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 6px;">📥 IMPORTAR ARQUIVO PDF:</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" id="btnUploadPdf" style="background: #4f46e5; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                        📁 Escolher PDF da OS
+                    </button>
+                    <input type="file" id="inputPdf" accept=".pdf" style="display: none;">
+                    <span id="nomeArquivoPdf" style="font-size: 11px; color: #64748b; font-style: italic;">Nenhum arquivo carregado</span>
+                </div>
+            </div>
 
-            <!-- Apresentação Fixa dos Dados Extraídos -->
+            <label style="font-size: 11px; font-weight: bold; margin-top: 10px;">TEXTO CAPTURADO DO PDF:</label>
+            <textarea id="dadosComissao" placeholder="O texto extraído do PDF aparecerá aqui automaticamente..." style="height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-family: monospace;"></textarea>
+
             <div id="boxResultado" style="background: #f0fdf4; padding: 20px; border-radius: 12px; border: 2px solid #bbf7d0; margin-top: 15px; text-align: left;">
                 <span style="display: block; font-size: 12px; color: #166534; font-weight: bold; text-align: center; margin-bottom: 10px;">
                     RESUMO DA ORDEM DE SERVIÇO
@@ -76,7 +85,6 @@
                 </div>
             </div>
 
-            <!-- Ações -->
             <div style="display: flex; gap: 10px; margin-top: 10px;">
                 <button class="btn-salvar" id="btnWhatsAppTexto" style="flex: 1; background: #25d366;">💬 Enviar via Whats</button>
                 <button class="btn-salvar" id="btnImprimirPDF" style="flex: 1; background: #475569;">📄 Visualizar / PDF</button>
@@ -84,9 +92,8 @@
         </section>
     </div>
 
-    <!-- Scripts MVC -->
-    <script src="model_oficina.js?v=2"></script>
-    <script src="view_oficina.js?v=2"></script>
-    <script src="controller_oficina.js?v=2"></script>
+    <script src="model_faxina.js?v=5"></script>
+    <script src="view_faxina.js?v=5"></script>
+    <script src="controller_faxina.js?v=5"></script>
 </body>
 </html>
