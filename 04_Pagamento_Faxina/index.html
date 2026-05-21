@@ -15,7 +15,6 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY'; 
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // Segurança de Acesso
         (function() {
             const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
             if (!usuario || (usuario.empresa !== 'MASTER' && usuario.empresa !== 'ADM')) {
@@ -24,6 +23,67 @@
             }
         })();
     </script>
+
+    <style>
+        /* ===================================================
+           REGRAS DE IMPRESSÃO (FICA IGUAL A UM PDF DE VERDADE)
+           =================================================== */
+        @media print {
+            /* Oculta absolutamente tudo que for controle de sistema */
+            body {
+                background: white !important;
+                color: black !important;
+                font-family: 'Courier New', Courier, monospace !important; /* Estilo relatório clássico */
+            }
+            header, 
+            .form-grid-vertical > div, 
+            #filtroCategoria, 
+            #selectColaborador, 
+            label, 
+            textarea, 
+            button {
+                display: none !important;
+            }
+            .container {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+            /* Transforma o box verde em uma folha de relatório timbrada */
+            #boxResultado {
+                background: white !important;
+                border: 2px solid #000 !important;
+                border-radius: 0 !important;
+                padding: 20px !important;
+                margin: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box;
+            }
+            #tituloRecibo {
+                font-size: 16px !important;
+                border-bottom: 2px solid #000;
+                padding-bottom: 8px;
+                margin-bottom: 15px !important;
+            }
+            .linha-impressao {
+                border-bottom: 1px dashed #ccc;
+                padding: 6px 0;
+            }
+            /* Exibe a área de assinatura que fica oculta na tela */
+            #areaAssinatura {
+                display: block !important;
+                margin-top: 60px !important;
+                text-align: center;
+            }
+        }
+
+        /* Estilo extra para esconder a assinatura na tela comum */
+        #areaAssinatura {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -61,39 +121,66 @@
             </div>
 
             <label style="font-size: 11px; font-weight: bold; margin-top: 10px;">TEXTO CAPTURADO DO PDF:</label>
-            <textarea id="dadosComissao" placeholder="O texto extraído do PDF aparecerá aqui automaticamente..." style="height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-family: monospace;"></textarea>
+            <textarea id="dadosComissao" placeholder="O texto extraído do PDF aparecerá aqui automaticamente..." style="height: 80px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-family: monospace;"></textarea>
 
-            <div id="boxResultado" style="background: #f0fdf4; padding: 20px; border-radius: 12px; border: 2px solid #bbf7d0; margin-top: 15px; text-align: left;">
-                <span style="display: block; font-size: 12px; color: #166534; font-weight: bold; text-align: center; margin-bottom: 10px;">
-                    RESUMO DA ORDEM DE SERVIÇO
-                </span>
+            <div id="boxResultado" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 2px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); margin-top: 15px; text-align: left;">
                 
-                <div style="font-size: 13px; color: #334155; line-height: 1.6;">
-                    📌 <strong>Nº O.S:</strong> <span id="resOS">-</span><br>
-                    🛠️ <strong>Serviço:</strong> <span id="resServico">-</span><br>
-                    ⏱️ <strong>Pronto:</strong> <span id="resPronto">-</span> | <strong>Saída:</strong> <span id="resSaida">-</span><br>
-                    💵 <strong>Total do Serviço:</strong> <span id="resTotalServico">R$ 0,00</span><br>
-                    📊 <strong>Taxa (20%):</strong> <span id="resTaxa">R$ 0,00</span><br>
-                    📉 <strong>Subtotal / Total Geral:</strong> <span id="resSubtotal">R$ 0,00</span><br>
+                <div id="tituloRecibo" style="text-align: center; margin-bottom: 18px;">
+                    <span style="display: block; font-size: 14px; color: #1e293b; font-weight: bold; letter-spacing: 1px;">
+                        PROGGABS - DEMONSTRATIVO DE REPASSE
+                    </span>
+                    <span style="font-size: 11px; color: #64748b;">Setor de Manutenção & Oficina Mecânica</span>
+                </div>
+                
+                <div style="font-size: 13px; color: #334155; line-height: 2;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 4px 0;">
+                        <span>👤 <strong>Colaborador Beneficiário:</strong></span>
+                        <span id="resColaborador" style="font-weight: bold; color: #0f172a;">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 4px 0;">
+                        <span>📌 <strong>Documento / Nº O.S:</strong></span>
+                        <span id="resOS" style="font-weight: bold;">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 4px 0;">
+                        <span>🛠️ <strong>Descrição do Serviço:</strong></span>
+                        <span id="resServico" style="color: #475569;">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 4px 0;">
+                        <span>⏱️ <strong>Status Cronograma:</strong></span>
+                        <span>Pronto: <span id="resPronto">-</span> | Saída: <span id="resSaida">-</span></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 4px 0;">
+                        <span>💵 <strong>Volume Bruto Realizado:</strong></span>
+                        <span id="resTotalServico">R$ 0,00</span>
+                    </div>
+                    <div id="linhaTaxaAdm" style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 4px 0;">
+                        <span>📊 <strong>Retenção Operacional (20%):</strong></span>
+                        <span id="resTaxa" style="color: #dc2626;">- R$ 0,00</span>
+                    </div>
                 </div>
 
-                <hr style="border: 0; border-top: 1px dashed #bbf7d0; margin: 12px 0;">
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; margin-top: 15px;">
+                    <span style="font-size: 11px; color: #475569; font-weight: bold; display: block; letter-spacing: 0.5px;">VALOR LÍQUIDO DA COMISSÃO</span>
+                    <strong id="valorTotalComissao" style="font-size: 34px; color: #16a34a; display: block; margin: 2px 0;">R$ 0,00</strong>
+                    <span id="infoPixRecibo" style="font-size: 10px; color: #64748b; font-style: italic; display: block; margin-top: 4px;">Chave PIX: -</span>
+                </div>
 
-                <div style="text-align: center;">
-                    <span style="font-size: 11px; color: #166534; font-weight: bold; display: block;">VALOR DA COMISSÃO A PAGAR</span>
-                    <strong id="valorTotalComissao" style="font-size: 32px; color: #15803d; display: block; margin: 5px 0;">R$ 0,00</strong>
+                <div id="areaAssinatura">
+                    <p style="font-size: 11px; color: #000; margin-bottom: 45px;">Declaro ter recebido a importância líquida descrita neste documento.</p>
+                    <div style="border-top: 1px solid #000; width: 280px; margin: 0 auto;"></div>
+                    <span id="nomeAssinatura" style="font-size: 12px; font-weight: bold; display: block; margin-top: 5px;">Assinatura do Colaborador</span>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <div style="display: flex; gap: 10px; margin-top: 12px;">
                 <button class="btn-salvar" id="btnWhatsAppTexto" style="flex: 1; background: #25d366;">💬 Enviar via Whats</button>
                 <button class="btn-salvar" id="btnImprimirPDF" style="flex: 1; background: #475569;">📄 Visualizar / PDF</button>
             </div>
         </section>
     </div>
 
-    <script src="model_faxina.js?v=5"></script>
-    <script src="view_faxina.js?v=5"></script>
-    <script src="controller_faxina.js?v=5"></script>
+    <script src="model_faxina.js?v=6"></script>
+    <script src="view_faxina.js?v=6"></script>
+    <script src="controller_faxina.js?v=6"></script>
 </body>
 </html>

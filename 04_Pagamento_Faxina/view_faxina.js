@@ -1,4 +1,4 @@
-/* view_faxina.js - Renderização do Layout da Oficina */
+/* view_faxina.js - Renderização de Layout Alinhado */
 
 const OficinaView = {
     atualizarSelectColaboradores(lista, setor) {
@@ -11,23 +11,33 @@ const OficinaView = {
             const option = document.createElement('option');
             option.value = colab.nome;
             option.textContent = colab.nome;
-            option.dataset.pix = colab.pix || '';
-            option.dataset.banco = colab.banco || '';
+            option.dataset.pix = colab.pix || 'Não cadastrado';
+            option.dataset.banco = colab.banco || 'Não informado';
             option.dataset.tel = colab.telefone || '';
             
             selectColaborador.appendChild(option);
         });
     },
 
-    renderizarCampos(dados) {
+    renderizarCampos(dados, nomeSelecionado = "-", chavePix = "-") {
+        document.getElementById('resColaborador').textContent = nomeSelecionado;
+        document.getElementById('nomeAssinatura').textContent = `Assinatura: ${nomeSelecionado}`;
         document.getElementById('resOS').textContent = dados.os;
         document.getElementById('resServico').textContent = dados.servico;
         document.getElementById('resPronto').textContent = dados.pronto;
         document.getElementById('resSaida').textContent = dados.saida;
         
         document.getElementById('resTotalServico').textContent = `R$ ${dados.totalServico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('resTaxa').textContent = `R$ ${dados.taxa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('resSubtotal').textContent = `R$ ${dados.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         document.getElementById('valorTotalComissao').textContent = `R$ ${dados.comissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        document.getElementById('infoPixRecibo').textContent = `Destino: PIX ${chavePix}`;
+
+        // Regra visual estética: Se for Relatório Consolidado, esconde a linha de taxa de 20%
+        const linhaTaxa = document.getElementById('linhaTaxaAdm');
+        if (dados.os === "Relatório Geral") {
+            linhaTaxa.style.display = 'none';
+        } else {
+            linhaTaxa.style.display = 'flex';
+            document.getElementById('resTaxa').textContent = `- R$ ${dados.taxa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        }
     }
 };

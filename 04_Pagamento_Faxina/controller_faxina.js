@@ -1,6 +1,5 @@
-/* controller_faxina.js - Mecanismo de Upload e Controle */
+/* controller_faxina.js - Mecanismo de Upload Espacial e Controle do Recibo */
 
-// Aponta o Worker do PDF.js para a CDN estável
 if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 }
@@ -12,28 +11,39 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnWhatsAppTexto = document.getElementById('btnWhatsAppTexto');
     const btnImprimirPDF = document.getElementById('btnImprimirPDF');
     
-    // Elementos de Upload do PDF
     const btnUploadPdf = document.getElementById('btnUploadPdf');
     const inputPdf = document.getElementById('inputPdf');
     const nomeArquivoPdf = document.getElementById('nomeArquivoPdf');
 
-    // Executa a carga inicial da equipe
+    // Estado global da leitura ativa para permitir re-renderizações fluidas
+    let dadosAtuais = OficinaModel.retornarVazio();
+
     inicializarMódulo();
 
     async function inicializarMódulo() {
         try {
             const equipe = await OficinaModel.buscarColaboradores();
             OficinaView.atualizarSelectColaboradores(equipe, filtroCategoria.value);
-            console.log("✅ Equipe carregada via Model!");
+            console.log("✅ Equipe sincronizada!");
         } catch (err) {
             console.error("Erro na inicialização:", err);
             selectColaborador.innerHTML = "<option>❌ Erro ao carregar equipe</option>";
         }
     }
 
-    // ==========================================
-    // CAPTURA E PROCESSAMENTO DIRETOS DO PDF
-    // ==========================================
+    // Gerenciador centralizado de renderização unificada
+    function atualizarTelaDinamica() {
+        const opcaoAtiva = selectColaborador.options[selectColaborador.selectedIndex];
+        const nome = selectColaborador.value ? selectColaborador.value : "-";
+        const pix = (opcaoAtiva && opcaoAtiva.dataset.pix) ? opcaoAtiva.dataset.pix : "Não informado";
+        
+        // Passa os dados brutos + metadados do contato para a View deixar "tudo bonitim"
+        OficinaView.renderizarCampos(dadosAtuais, nome, pix);
+    }
+
+    // ===================================================
+    // RECONSTRUTOR DE MATRIZ TEXTUAL DO PDF (ALINHAMENTO Y/X)
+    // ===================================================
     if (btnUploadPdf && inputPdf) {
         btnUploadPdf.onclick = () => inputPdf.click();
 
@@ -42,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!arquivo) return;
 
             nomeArquivoPdf.textContent = arquivo.name;
-            btnUploadPdf.innerText = "🔄 Lendo PDF...";
+            btnUploadPdf.innerText = "🔄 Mapeando Tabela...";
             btnUploadPdf.style.background = "#d97706";
 
             try {
@@ -53,34 +63,79 @@ document.addEventListener("DOMContentLoaded", () => {
                         const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
                         let textoCompleto = "";
 
-                        // Varre as páginas do PDF extraindo as strings de texto
                         for (let i = 1; i <= pdf.numPages; i++) {
                             const pagina = await pdf.getPage(i);
                             const conteudo = await pagina.getTextContent();
-                            const textoLinha = conteudo.items.map(item => item.str).join(" ");
-                            textoCompleto += textoLinha + "\n";
+                            
+                            // Ordenação geométrica por coordenadas (Y decrescente, X crescente)
+                            const itensMapeados = [...conteudo.items].sort((a, b) => {
+                                if (Math.abs(a.transform[5] - b.transform[5]) > 4) {
+                                    return b.transform[5] - a.transform[5]; 
+                                }
+                                return a.transform[4] - b.transform[4]; 
+                            });
+
+                            let textoPagina = "";
+                            let ultimoY = null;
+
+                            for (const item of itensMapeados) {
+                                if (ultimoY !== null && Math.abs(item.transform[5] - ultimoY) > 4) {
+                                    textoPagina += "\n";
+                                } else if (textoPagina !== "" && !textoPagina.endsWith("\n")) {
+                                    textoPagina += " ";
+                                }
+                                textoPagina += item.str;
+                                ultimoY = item.transform[5];
+                            }
+                            textoCompleto += textoPagina + "\n";
                         }
 
-                        // Joga o texto bruto na caixa de texto
                         dadosComissao.value = textoCompleto;
 
-                        // Roda as expressões regulares do Model e renderiza na View
-                        const dadosFormatados = OficinaModel.interpretarTexto(textoCompleto);
-                        OficinaView.renderizarCampos(dadosFormatados);
+                        // Processa a inteligência do Regex no Model
+                        dadosAtuais = OficinaModel.interpretarTexto(textoCompleto);
+
+                        // MÁGICA DE AUTO-SELEÇÃO DO MECÂNICO
+                        if (dadosAtuais.nomeColaboradorPdf) {
+                            const nomeAlvo = dadosAtuais.nomeColaboradorPdf.toLowerCase().trim();
+                            let achou = false;
+
+                            for (let option of selectColaborador.options) {
+                                if (option.value && (nomeAlvo.includes(option.value.toLowerCase().trim()) || option.value.toLowerCase().trim().includes(nomeAlvo))) {
+                                    selectColaborador.value = option.value;
+                                    achou = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!achou) {
+                                filtroCategoria.value = "TODOS";
+                                OficinaView.atualizarSelectColaboradores(OficinaModel.listaColaboradores, "TODOS");
+                                for (let option of selectColaborador.options) {
+                                    if (option.value && (nomeAlvo.includes(option.value.toLowerCase().trim()) || option.value.toLowerCase().trim().includes(nomeAlvo))) {
+                                        selectColaborador.value = option.value;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Atualiza os componentes gráficos do recibo
+                        atualizarTelaDinamica();
 
                         btnUploadPdf.innerText = "✅ PDF Processado!";
                         btnUploadPdf.style.background = "#059669";
 
                     } catch (pdfError) {
-                        console.error("Erro ao descriptografar texto do PDF:", pdfError);
-                        alert("Não foi possível extrair o texto automaticamente. Copie o texto do arquivo e cole na caixa.");
+                        console.error("Falha ao descriptografar PDF:", pdfError);
+                        alert("Não foi possível ler a estrutura nativa deste PDF.");
                         resetarBotao();
                     }
                 };
                 fileReader.readAsArrayBuffer(arquivo);
 
             } catch (err) {
-                console.error("Erro no leitor de arquivos:", err);
+                console.error("Erro FileReader:", err);
                 resetarBotao();
             }
         };
@@ -91,26 +146,34 @@ document.addEventListener("DOMContentLoaded", () => {
         btnUploadPdf.style.background = "#4f46e5";
     }
 
-    // ==========================================
-    // EVENTOS DE INTERFACE
-    // ==========================================
+    // ===================================================
+    // DETECÇÃO DE MUDANÇAS DE ESTADO (INPUTS E SELECTS)
+    // ===================================================
     filtroCategoria.onchange = () => {
         OficinaView.atualizarSelectColaboradores(OficinaModel.listaColaboradores, filtroCategoria.value);
+        atualizarTelaDinamica();
+    };
+
+    selectColaborador.onchange = () => {
+        atualizarTelaDinamica();
     };
 
     dadosComissao.oninput = () => {
-        const dadosProcessados = OficinaModel.interpretarTexto(dadosComissao.value);
-        OficinaView.renderizarCampos(dadosProcessados);
+        dadosAtuais = OficinaModel.interpretarTexto(dadosComissao.value);
+        atualizarTelaDinamica();
     };
 
+    // ===================================================
+    // SALVAMENTO NO SUPABASE E DISPARO WHATSAPP
+    // ===================================================
     btnWhatsAppTexto.onclick = async () => {
         if (!selectColaborador.value) {
-            alert("⚠️ Selecione um colaborador primeiro!");
+            alert("⚠️ Selecione ou importe um colaborador válido!");
             return;
         }
 
         btnWhatsAppTexto.disabled = true;
-        btnWhatsAppTexto.innerText = "🔄 Gravando...";
+        btnWhatsAppTexto.innerText = "🔄 Registrando...";
 
         const opcaoAtiva = selectColaborador.options[selectColaborador.selectedIndex];
         const nomeColaborador = opcaoAtiva.value;
@@ -118,24 +181,31 @@ document.addEventListener("DOMContentLoaded", () => {
         const bancoColaborador = opcaoAtiva.dataset.banco || 'Não informado';
         let telefone = opcaoAtiva.dataset.tel ? opcaoAtiva.dataset.tel.replace(/\D/g, '') : '';
 
-        const dadosOS = OficinaModel.interpretarTexto(dadosComissao.value);
-
         try {
             await _supabase.from('comissoes_oficina').insert([{
                 colaborador: nomeColaborador,
-                numero_os: dadosOS.os,
-                servico: dadosOS.servico,
-                total_servico: dadosOS.totalServico,
-                taxa_administrativa: dadosOS.taxa,
-                subtotal: dadosOS.subtotal,
-                valor_comissao: dadosOS.comissao,
+                numero_os: dadosAtuais.os,
+                servico: dadosAtuais.servico,
+                total_servico: dadosAtuais.totalServico,
+                taxa_administrativa: dadosAtuais.taxa,
+                subtotal: dadosAtuais.subtotal,
+                valor_comissao: dadosAtuais.comissao,
                 data_registro: new Date().toISOString()
             }]);
         } catch (err) {
             console.error("Erro Supabase:", err);
         }
 
-        const msg = `*⚙️ RELATÓRIO DE COMISSÃO - OFICINA*\n\n👤 *Colaborador:* ${nomeColaborador}\n📌 *Nº O.S:* ${dadosOS.os}\n🛠️ *Serviço:* ${dadosOS.servico}\n💵 *Total do Serviço:* R$ ${dadosOS.totalServico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n📊 *Taxa Administrativa (20%):* R$ ${dadosOS.taxa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n📉 *Subtotal Geral:* R$ ${dadosOS.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n💰 *VALOR DA COMISSÃO:* *R$ ${dadosOS.comissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n*Pagamento:*\n🔑 *PIX:* ${pixColaborador}\n🏦 *Banco:* ${bancoColaborador}`;
+        let msg = `*⚙️ RELATÓRIO DE COMISSÃO - OFICINA*\n\n`;
+        msg += `👤 *Colaborador:* ${nomeColaborador}\n`;
+        msg += `📌 *Nº O.S:* ${dadosAtuais.os}\n`;
+        msg += `🛠️ *Serviço:* ${dadosAtuais.servico}\n`;
+        msg += `💵 *Total do Serviço:* R$ ${dadosAtuais.totalServico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+        if (dadosAtuais.os !== "Relatório Geral") {
+            msg += `📊 *Taxa Administrativa (20%):* R$ ${dadosAtuais.taxa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+        }
+        msg += `\n💰 *VALOR DA COMISSÃO:* *R$ ${dadosAtuais.comissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*\n\n`;
+        msg += `*Pagamento:*\n🔑 *PIX:* ${pixColaborador}\n🏦 *Banco:* ${bancoColaborador}`;
 
         if (telefone && telefone.length <= 11) telefone = '55' + telefone;
         window.open(`https://api.whatsapp.com/send?phone=${telefone}&text=${encodeURIComponent(msg)}`, '_blank');
