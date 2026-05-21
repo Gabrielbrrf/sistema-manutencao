@@ -157,7 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return resultado;
     }
 
-    // 4. MECANISMO DE UPLOAD DO ARQUIVO PDF
+    // 4. MECANISMO DE DRAG / UPLOAD E EXTRAÇÃO ROBUSTA DO ARQUIVO PDF
     if (btnUploadPdf && inputPdf) {
         btnUploadPdf.onclick = () => inputPdf.click();
 
@@ -173,25 +173,35 @@ document.addEventListener("DOMContentLoaded", async () => {
             fileReader.onload = async function (event) {
                 try {
                     const arrayBuffer = new Uint8Array(event.target.result);
+                    
+                    // Configuração explícita do PDF.js
                     const pdfjsLib = window['pdfjs-dist/build/pdf'];
                     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
                     const pdf = await loadingTask.promise;
                     
                     let textoCompleto = "";
 
+                    // Varre as páginas garantindo o fluxo assíncrono correto de cada item
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const pagina = await pdf.getPage(i);
-                        const conteudo = await pagina.getTextContent();
+                        
+                        // O segredo está aqui: disableCombineTextItems false permite capturar o fluxo de colunas
+                        const conteudo = await pagina.getTextContent({ disableCombineTextItems: false });
+                        
+                        // Une os fragmentos mantendo um espaço simples entre colunas da tabela
                         const textoPagina = conteudo.items.map(item => item.str).join(" ");
                         textoCompleto += textoPagina + "\n";
                     }
 
-                    dadosComissao.value = textoCompleto.trim();
-                    dadosAtuais = interpretarTextoOficina(textoCompleto);
+                    // Limpa quebras sobressalentes e força a exibição real de TODO o texto no textarea
+                    const textoLimpo = textoCompleto.trim();
+                    dadosComissao.value = textoLimpo;
+                    
+                    // Executa o interpretador inteligente sobre a massa de dados real
+                    dadosAtuais = interpretarTextoOficina(textoLimpo);
 
-                    // Vinculação por tolerância ortográfica (Ignora diferenças como "BERNADO" vs "BERNARDO")
+                    // Vincula o Colaborador Automaticamente
                     if (dadosAtuais.nomeColaboradorPdf) {
-                        // Remove espaços e letras repetidas sequenciais aproximadas para bater a string limpa
                         const simplificar = (str) => str.toLowerCase().replace(/[^a-z]/g, '').replace('bernardo', 'bernado');
                         const nomeInjetado = simplificar(dadosAtuais.nomeColaboradorPdf);
                         
@@ -199,7 +209,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             if (!option.value) continue;
                             const nomeOpcao = simplificar(option.value);
                             
-                            if (nomeInjetado.includes(nomeOpcao) || nomeOpcao.includes(nomeInjetado) || nomeInjetado.substring(0, 8) === nomeOpcao.substring(0, 8)) {
+                            if (nomeInjetado.includes(nomeOpcao) || nomeOpcao.includes(nomeInjetado) || nomeInjetado.substring(0, 6) === nomeOpcao.substring(0, 6)) {
                                 selectColaborador.value = option.value;
                                 break;
                             }
@@ -218,11 +228,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             };
             fileReader.readAsArrayBuffer(arquivo);
         };
-    }
-
-    function resetarBotao() {
-        btnUploadPdf.innerText = "📁 Escolher PDF da OS";
-        btnUploadPdf.style.background = "#4f46e5";
     }
 
     // 5. EVENTOS DE INTERAÇÃO
