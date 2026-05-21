@@ -9,11 +9,17 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
     
     <script>
         const supabaseUrl = 'https://olawjagrfhcxsonmyopi.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sYXdqYWdyZmhjeHNvbm15b3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Mzc2NTEsImV4cCI6MjA4NjUxMzY1MX0.KB-n1QyDmDarzBofPuZ-SGUSUCwJsFq9p-HV3bWWMaY'; 
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Configuração global do Worker para evitar bloqueios de CORS e travamentos
+        if (typeof window['pdfjs-dist/build/pdf'] !== 'undefined') {
+            window['pdfjs-dist/build/pdf'].GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
 
         (function() {
             const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -29,11 +35,10 @@
            REGRAS DE IMPRESSÃO (FICA IGUAL A UM PDF DE VERDADE)
            =================================================== */
         @media print {
-            /* Oculta absolutamente tudo que for controle de sistema */
             body {
                 background: white !important;
                 color: black !important;
-                font-family: 'Courier New', Courier, monospace !important; /* Estilo relatório clássico */
+                font-family: 'Courier New', Courier, monospace !important;
             }
             header, 
             .form-grid-vertical > div, 
@@ -51,7 +56,6 @@
                 margin: 0 !important;
                 max-width: 100% !important;
             }
-            /* Transforma o box verde em uma folha de relatório timbrada */
             #boxResultado {
                 background: white !important;
                 border: 2px solid #000 !important;
@@ -71,7 +75,6 @@
                 border-bottom: 1px dashed #ccc;
                 padding: 6px 0;
             }
-            /* Exibe a área de assinatura que fica oculta na tela */
             #areaAssinatura {
                 display: block !important;
                 margin-top: 60px !important;
@@ -79,7 +82,6 @@
             }
         }
 
-        /* Estilo extra para esconder a assinatura na tela comum */
         #areaAssinatura {
             display: none;
         }
